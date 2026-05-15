@@ -10,5 +10,9 @@ public class Event
     public string AdminToken { get; set; } = "";
     public DateTime CreatedAt { get; set; }
 
+    public bool AllowMaybe { get; set; }
+    public DateTime? RsvpDeadline { get; set; }
+    public ContactRequirement ContactRequirement { get; set; }
+
     public List<Rsvp> Rsvps { get; set; } = new();
 }

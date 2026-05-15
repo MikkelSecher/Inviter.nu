@@ -1,67 +1,127 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Button, Card } from '../components/ui';
+import { AnimatePresence, motion } from 'motion/react';
+import { ArrowRight, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { forgetEvent, listMyEvents, type MyEvent } from '../lib/myEvents';
 
 export function MyEventsPage() {
   const [events, setEvents] = useState<MyEvent[]>([]);
+  const [pendingRemoval, setPendingRemoval] = useState<MyEvent | null>(null);
 
-  useEffect(() => { setEvents(listMyEvents()); }, []);
-
-  function remove(id: string) {
-    if (!confirm('Fjern dette event fra din lokale liste? (Eventet slettes ikke — du mister bare hurtig adgang fra denne browser.)')) return;
-    forgetEvent(id);
+  useEffect(() => {
     setEvents(listMyEvents());
+  }, []);
+
+  function confirmRemoval() {
+    if (!pendingRemoval) return;
+    forgetEvent(pendingRemoval.id);
+    setEvents(listMyEvents());
+    setPendingRemoval(null);
   }
 
   if (events.length === 0) {
     return (
-      <Card>
-        <h1 className="text-lg font-semibold">Mine events</h1>
-        <p className="mt-2 text-sm text-slate-600">
-          Du har ikke oprettet nogen events i denne browser endnu.
-        </p>
-        <div className="mt-4">
-          <Link to="/">
-            <Button>Opret et event</Button>
-          </Link>
+      <div className="space-y-6">
+        <div>
+          <h1 className="font-serif text-3xl tracking-tight sm:text-4xl">Mine events</h1>
+          <p className="text-muted-foreground mt-2 text-sm">
+            Du har ikke oprettet nogen events i denne browser endnu.
+          </p>
         </div>
-      </Card>
+        <Card>
+          <CardContent className="flex flex-col items-start gap-4 pt-6">
+            <p className="text-sm">Klar til at samle gæster?</p>
+            <Button asChild>
+              <Link to="/">
+                Opret et event <ArrowRight className="ml-1 size-4" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Mine events</h1>
-      <p className="text-sm text-slate-600">
-        Gemt lokalt i din browser. Tæller ikke som login — mister du adgang til denne browser, mister du listen.
-      </p>
-
-      <div className="space-y-3">
-        {events.map((ev) => (
-          <Card key={ev.id}>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <div className="font-medium text-slate-900">{ev.title}</div>
-                <div className="text-xs text-slate-500">
-                  Oprettet {new Date(ev.createdAt).toLocaleDateString('da-DK')}
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Link to={`/manage/${ev.adminToken}`}>
-                  <Button variant="secondary">Åbn</Button>
-                </Link>
-                <button
-                  onClick={() => remove(ev.id)}
-                  className="text-xs text-slate-400 hover:text-rose-600"
-                >
-                  Fjern
-                </button>
-              </div>
-            </div>
-          </Card>
-        ))}
+      <div>
+        <h1 className="font-serif text-3xl tracking-tight sm:text-4xl">Mine events</h1>
+        <p className="text-muted-foreground mt-2 text-sm">
+          Gemt lokalt i denne browser. Mister du browseren, mister du listen — ikke selve eventet.
+        </p>
       </div>
+
+      <ul className="space-y-3">
+        <AnimatePresence initial={false}>
+          {events.map((ev) => (
+            <motion.li
+              key={ev.id}
+              layout
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, x: -16, transition: { duration: 0.18 } }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+            >
+              <Card className="transition-shadow hover:shadow-md">
+                <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
+                  <div className="min-w-0">
+                    <div className="truncate font-medium">{ev.title}</div>
+                    <div className="text-muted-foreground text-xs">
+                      Oprettet {new Date(ev.createdAt).toLocaleDateString('da-DK')}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button asChild variant="secondary" size="sm">
+                      <Link to={`/manage/${ev.adminToken}`}>
+                        Åbn <ArrowRight className="ml-1 size-3.5" />
+                      </Link>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setPendingRemoval(ev)}
+                      aria-label="Fjern fra liste"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.li>
+          ))}
+        </AnimatePresence>
+      </ul>
+
+      <AlertDialog
+        open={!!pendingRemoval}
+        onOpenChange={(open) => !open && setPendingRemoval(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Fjern fra liste?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Eventet slettes ikke — du mister bare hurtig adgang fra denne browser. Du kan stadig
+              komme tilbage hvis du har admin-linket.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annullér</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRemoval}>Fjern</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -1,9 +1,11 @@
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import type { RsvpStatus } from '../api/types';
 
 const styles: Record<RsvpStatus, string> = {
-  Yes: 'bg-emerald-100 text-emerald-800 ring-emerald-200',
-  Maybe: 'bg-amber-100 text-amber-800 ring-amber-200',
-  No: 'bg-rose-100 text-rose-800 ring-rose-200',
+  Yes: 'bg-status-yes text-status-yes-foreground border-transparent',
+  Maybe: 'bg-status-maybe text-status-maybe-foreground border-transparent',
+  No: 'bg-status-no text-status-no-foreground border-transparent',
 };
 
 const labels: Record<RsvpStatus, string> = {
@@ -12,11 +14,11 @@ const labels: Record<RsvpStatus, string> = {
   No: 'Kommer ikke',
 };
 
-export function StatusBadge({ status }: { status: RsvpStatus }) {
+export function StatusBadge({ status, className }: { status: RsvpStatus; className?: string }) {
   return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${styles[status]}`}>
+    <Badge className={cn(styles[status], 'font-medium', className)} variant="secondary">
       {labels[status]}
-    </span>
+    </Badge>
   );
 }
 

@@ -18,6 +18,8 @@ public class AppDbContext : DbContext
             e.Property(x => x.Description).HasMaxLength(4000);
             e.Property(x => x.InviteToken).IsRequired().HasMaxLength(64);
             e.Property(x => x.AdminToken).IsRequired().HasMaxLength(128);
+            e.Property(x => x.AllowMaybe).HasDefaultValue(true);
+            e.Property(x => x.ContactRequirement).HasConversion<int>().HasDefaultValue(ContactRequirement.None);
             e.HasIndex(x => x.InviteToken).IsUnique();
             e.HasIndex(x => x.AdminToken).IsUnique();
             e.HasMany(x => x.Rsvps)
@@ -31,6 +33,8 @@ public class AppDbContext : DbContext
             r.Property(x => x.GuestName).IsRequired().HasMaxLength(200);
             r.Property(x => x.Comment).HasMaxLength(2000);
             r.Property(x => x.Status).HasConversion<int>();
+            r.Property(x => x.Email).HasMaxLength(200);
+            r.Property(x => x.Phone).HasMaxLength(50);
             r.HasIndex(x => x.EventId);
         });
     }

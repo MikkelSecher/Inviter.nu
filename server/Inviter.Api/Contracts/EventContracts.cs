@@ -2,16 +2,31 @@ using Inviter.Api.Domain;
 
 namespace Inviter.Api.Contracts;
 
-public record CreateEventRequest(string Title, string? Description, DateTime StartsAt);
+public record CreateEventRequest(
+    string Title,
+    string? Description,
+    DateTime StartsAt,
+    bool AllowMaybe,
+    DateTime? RsvpDeadline,
+    ContactRequirement ContactRequirement);
 
-public record UpdateEventRequest(string Title, string? Description, DateTime StartsAt);
+public record UpdateEventRequest(
+    string Title,
+    string? Description,
+    DateTime StartsAt,
+    bool AllowMaybe,
+    DateTime? RsvpDeadline,
+    ContactRequirement ContactRequirement);
 
 public record EventPublicDto(
     Guid Id,
     string Title,
     string Description,
     DateTime StartsAt,
-    string InviteToken);
+    string InviteToken,
+    bool AllowMaybe,
+    DateTime? RsvpDeadline,
+    ContactRequirement ContactRequirement);
 
 public record EventCreatedDto(
     Guid Id,
@@ -20,7 +35,10 @@ public record EventCreatedDto(
     DateTime StartsAt,
     string InviteToken,
     string AdminToken,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    bool AllowMaybe,
+    DateTime? RsvpDeadline,
+    ContactRequirement ContactRequirement);
 
 public record EventAdminDto(
     Guid Id,
@@ -30,6 +48,9 @@ public record EventAdminDto(
     string InviteToken,
     string AdminToken,
     DateTime CreatedAt,
+    bool AllowMaybe,
+    DateTime? RsvpDeadline,
+    ContactRequirement ContactRequirement,
     IReadOnlyList<RsvpDto> Rsvps);
 
 public record RsvpDto(
@@ -37,6 +58,13 @@ public record RsvpDto(
     string GuestName,
     RsvpStatus Status,
     string? Comment,
+    string? Email,
+    string? Phone,
     DateTime SubmittedAt);
 
-public record CreateRsvpRequest(string GuestName, RsvpStatus Status, string? Comment);
+public record CreateRsvpRequest(
+    string GuestName,
+    RsvpStatus Status,
+    string? Comment,
+    string? Email,
+    string? Phone);
