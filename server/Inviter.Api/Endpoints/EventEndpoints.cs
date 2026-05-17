@@ -30,6 +30,7 @@ public static class EventEndpoints
             Id = Guid.NewGuid(),
             Title = req.Title.Trim(),
             Description = (req.Description ?? "").Trim(),
+            Location = (req.Location ?? "").Trim(),
             StartsAt = DateTime.SpecifyKind(req.StartsAt, DateTimeKind.Utc),
             InviteToken = TokenGenerator.NewInviteToken(),
             AdminToken = TokenGenerator.NewAdminToken(),
@@ -45,7 +46,7 @@ public static class EventEndpoints
         await db.SaveChangesAsync();
 
         return Results.Created($"/api/manage/{ev.AdminToken}", new EventCreatedDto(
-            ev.Id, ev.Title, ev.Description, ev.StartsAt,
+            ev.Id, ev.Title, ev.Description, ev.Location, ev.StartsAt,
             ev.InviteToken, ev.AdminToken, ev.CreatedAt,
             ev.AllowMaybe, ev.RsvpDeadline, ev.ContactRequirement));
     }
@@ -57,7 +58,7 @@ public static class EventEndpoints
         if (ev is null) return Results.NotFound();
 
         return Results.Ok(new EventPublicDto(
-            ev.Id, ev.Title, ev.Description, ev.StartsAt, ev.InviteToken,
+            ev.Id, ev.Title, ev.Description, ev.Location, ev.StartsAt, ev.InviteToken,
             ev.AllowMaybe, ev.RsvpDeadline, ev.ContactRequirement));
     }
 
@@ -145,7 +146,7 @@ public static class EventEndpoints
             .ToList();
 
         return Results.Ok(new EventAdminDto(
-            ev.Id, ev.Title, ev.Description, ev.StartsAt,
+            ev.Id, ev.Title, ev.Description, ev.Location, ev.StartsAt,
             ev.InviteToken, ev.AdminToken, ev.CreatedAt,
             ev.AllowMaybe, ev.RsvpDeadline, ev.ContactRequirement,
             rsvps));
@@ -161,6 +162,7 @@ public static class EventEndpoints
 
         ev.Title = req.Title.Trim();
         ev.Description = (req.Description ?? "").Trim();
+        ev.Location = (req.Location ?? "").Trim();
         ev.StartsAt = DateTime.SpecifyKind(req.StartsAt, DateTimeKind.Utc);
         ev.AllowMaybe = req.AllowMaybe;
         ev.RsvpDeadline = req.RsvpDeadline.HasValue

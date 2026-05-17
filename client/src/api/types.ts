@@ -6,6 +6,7 @@ export interface EventPublic {
   id: string;
   title: string;
   description: string;
+  location: string;
   startsAt: string;
   inviteToken: string;
   allowMaybe: boolean;
@@ -27,6 +28,7 @@ export interface EventAdmin {
   id: string;
   title: string;
   description: string;
+  location: string;
   startsAt: string;
   inviteToken: string;
   adminToken: string;
@@ -41,6 +43,7 @@ export interface EventCreated {
   id: string;
   title: string;
   description: string;
+  location: string;
   startsAt: string;
   inviteToken: string;
   adminToken: string;
@@ -53,6 +56,7 @@ export interface EventCreated {
 export interface CreateEventInput {
   title: string;
   description: string;
+  location: string;
   startsAt: string;
   allowMaybe: boolean;
   rsvpDeadline: string | null;

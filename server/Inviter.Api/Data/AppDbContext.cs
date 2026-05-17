@@ -16,6 +16,7 @@ public class AppDbContext : DbContext
         {
             e.Property(x => x.Title).IsRequired().HasMaxLength(200);
             e.Property(x => x.Description).HasMaxLength(4000);
+            e.Property(x => x.Location).HasMaxLength(500);
             e.Property(x => x.InviteToken).IsRequired().HasMaxLength(64);
             e.Property(x => x.AdminToken).IsRequired().HasMaxLength(128);
             e.Property(x => x.AllowMaybe).HasDefaultValue(true);

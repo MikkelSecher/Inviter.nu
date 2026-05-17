@@ -20,6 +20,7 @@ export function CreateEventPage() {
   const navigate = useNavigate();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [location, setLocation] = useState('');
   const [startsAt, setStartsAt] = useState('');
   const [allowMaybe, setAllowMaybe] = useState(false);
   const [rsvpDeadline, setRsvpDeadline] = useState('');
@@ -48,6 +49,7 @@ export function CreateEventPage() {
       const created = await api.createEvent({
         title: title.trim(),
         description: description.trim(),
+        location: location.trim(),
         startsAt: fromDatetimeLocalValue(startsAt),
         allowMaybe,
         rsvpDeadline: rsvpDeadline ? fromDatetimeLocalValue(rsvpDeadline) : null,
@@ -117,6 +119,20 @@ export function CreateEventPage() {
                 placeholder="Vi mødes i haven, tag gerne en flaske vin med…"
                 maxLength={4000}
                 rows={5}
+              />
+            </Field>
+
+            <Field
+              label="Sted (valgfri)"
+              htmlFor="location"
+              hint="Gade-adresse eller navn på stedet."
+            >
+              <Input
+                id="location"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="Vesterbrogade 12, 1620 København"
+                maxLength={500}
               />
             </Field>
 

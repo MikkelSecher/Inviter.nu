@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { toast } from 'sonner';
-import { Calendar, CalendarClock, Copy, Mail, Pencil, Phone, Trash2, Users, X } from 'lucide-react';
+import { Calendar, CalendarClock, Copy, Mail, MapPin, Pencil, Phone, Trash2, Users, X } from 'lucide-react';
 import { api, ApiError } from '../api/client';
 import type { ContactRequirement, EventAdmin, RsvpStatus } from '../api/types';
 import { Button } from '@/components/ui/button';
@@ -127,6 +127,19 @@ export function ManagePage() {
             <Calendar className="size-4" />
             {formatEventTime(event.startsAt)}
           </div>
+          {event.location && (
+            <div className="text-muted-foreground flex items-center gap-2 text-sm">
+              <MapPin className="size-4" />
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="hover:text-foreground hover:underline"
+              >
+                {event.location}
+              </a>
+            </div>
+          )}
           {event.rsvpDeadline && (
             <div
               className={cn(
@@ -343,6 +356,7 @@ function EditForm({
 }) {
   const [title, setTitle] = useState(event.title);
   const [description, setDescription] = useState(event.description);
+  const [location, setLocation] = useState(event.location);
   const [startsAt, setStartsAt] = useState(toDatetimeLocalValue(event.startsAt));
   const [allowMaybe, setAllowMaybe] = useState(event.allowMaybe);
   const [rsvpDeadline, setRsvpDeadline] = useState(
@@ -375,6 +389,7 @@ function EditForm({
       await api.updateEvent(adminToken, {
         title: title.trim(),
         description: description.trim(),
+        location: location.trim(),
         startsAt: fromDatetimeLocalValue(startsAt),
         allowMaybe,
         rsvpDeadline: rsvpDeadline ? fromDatetimeLocalValue(rsvpDeadline) : null,
@@ -408,6 +423,15 @@ function EditForm({
               onChange={(e) => setDescription(e.target.value)}
               maxLength={4000}
               rows={4}
+            />
+          </Field>
+          <Field label="Sted (valgfri)" htmlFor="edit-location">
+            <Input
+              id="edit-location"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="Vesterbrogade 12, 1620 København"
+              maxLength={500}
             />
           </Field>
           <Field label="Hvornår" htmlFor="edit-startsAt">

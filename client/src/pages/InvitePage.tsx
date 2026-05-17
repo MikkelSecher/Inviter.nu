@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { Calendar, CalendarClock, CheckCircle2, Lock } from 'lucide-react';
+import { Calendar, CalendarClock, CheckCircle2, Lock, MapPin } from 'lucide-react';
 import { api, ApiError } from '../api/client';
 import type { EventPublic, RsvpStatus } from '../api/types';
 import { Button } from '@/components/ui/button';
@@ -142,6 +142,19 @@ export function InvitePage() {
             <Calendar className="size-4" />
             {formatEventTime(event.startsAt)}
           </div>
+          {event.location && (
+            <div className="text-foreground/80 flex items-center gap-2 text-base">
+              <MapPin className="size-4" />
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="hover:underline"
+              >
+                {event.location}
+              </a>
+            </div>
+          )}
           {event.rsvpDeadline && !closed && (
             <div className="text-foreground/75 flex items-center gap-2 text-sm">
               <CalendarClock className="size-4" />
