@@ -1,0 +1,33 @@
+services:
+  api:
+    build:
+      context: ./server/Inviter.Api
+    environment:
+      ASPNETCORE_URLS: http://0.0.0.0:8080
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Default: "Data Source=/data/inviter.db"
+    volumes:
+      - inviter-data:/data
+    expose:
+      - "8080"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./client
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  inviter-data:
+  caddy-data:
+  caddy-config:

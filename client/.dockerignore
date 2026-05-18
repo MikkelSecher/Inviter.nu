@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.vite/
+.eslintcache
+.vscode/
+.idea/
+Dockerfile
+.dockerignore

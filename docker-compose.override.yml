@@ -1,0 +1,9 @@
+# Local dev overrides — auto-loaded af `docker compose up` lokalt.
+# IKKE på serveren: deploy med `docker compose -f docker-compose.yml up -d`
+# (eller behold filen ude af serveren; `-f`-syntaksen er sikrere).
+#
+# Grunden: http.sys på Windows holder port 80, så vi mapper til 8080 lokalt.
+services:
+  web:
+    ports: !override
+      - "8080:80"
