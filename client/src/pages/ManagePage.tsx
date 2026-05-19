@@ -1,10 +1,29 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { toast } from 'sonner';
-import { Calendar, CalendarClock, Copy, Mail, MapPin, Pencil, Phone, Trash2, Users, X } from 'lucide-react';
+import {
+  Calendar,
+  CalendarClock,
+  Copy,
+  Mail,
+  MapPin,
+  Pencil,
+  Phone,
+  Send,
+  Trash2,
+  UserPlus,
+  Users,
+  X,
+} from 'lucide-react';
 import { api, ApiError } from '../api/client';
-import type { ContactRequirement, EventAdmin, RsvpStatus } from '../api/types';
+import type {
+  AddInviteeEntry,
+  ContactRequirement,
+  EventAdmin,
+  Invitee,
+  RsvpStatus,
+} from '../api/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -283,6 +302,8 @@ export function ManagePage() {
           </div>
         )}
       </div>
+
+      <InviteeSection adminToken={token} eventTitle={event.title} />
 
       <AlertDialog
         open={!!pendingRemoval}
@@ -574,5 +595,323 @@ function EditForm({
         </form>
       </CardContent>
     </Card>
+  );
+}
+
+function parseBulkInvitees(text: string): AddInviteeEntry[] {
+  const tokens = text
+    .split(/[\n,;]+/)
+    .map((t) => t.trim())
+    .filter(Boolean);
+  return tokens.map((token) => {
+    const angleMatch = /^(.+?)\s*<([^>]+)>$/.exec(token);
+    if (angleMatch) {
+      return { name: angleMatch[1].trim() || null, email: angleMatch[2].trim() };
+    }
+    return { name: null, email: token };
+  });
+}
+
+function formatRelative(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString('da-DK', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function InviteeSection({
+  adminToken,
+  eventTitle,
+}: {
+  adminToken: string;
+  eventTitle: string;
+}) {
+  const [invitees, setInvitees] = useState<Invitee[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [bulkText, setBulkText] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [sending, setSending] = useState(false);
+  const [pendingRemoval, setPendingRemoval] = useState<{ id: string; email: string } | null>(null);
+
+  const load = useCallback(async () => {
+    setLoadError(null);
+    try {
+      const list = await api.listInvitees(adminToken);
+      setInvitees(list);
+    } catch (err) {
+      setLoadError(
+        err instanceof ApiError ? err.message : 'Kunne ikke hente gæstelisten.',
+      );
+    }
+  }, [adminToken]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const unsentCount = useMemo(
+    () => (invitees ?? []).filter((i) => i.lastSentAt === null).length,
+    [invitees],
+  );
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function onAdd(e: FormEvent) {
+    e.preventDefault();
+    setAddError(null);
+    const entries = parseBulkInvitees(bulkText);
+    if (entries.length === 0) {
+      setAddError('Indtast mindst én email-adresse.');
+      return;
+    }
+    setAdding(true);
+    try {
+      const res = await api.addInvitees(adminToken, entries);
+      if (res.added.length > 0) {
+        setInvitees((prev) => [...(prev ?? []), ...res.added]);
+        toast.success(
+          res.added.length === 1
+            ? '1 gæst tilføjet'
+            : `${res.added.length} gæster tilføjet`,
+        );
+      }
+      const skipped = res.skippedDuplicates.length + res.skippedInvalid.length;
+      if (skipped > 0) {
+        const parts: string[] = [];
+        if (res.skippedDuplicates.length > 0)
+          parts.push(`${res.skippedDuplicates.length} allerede tilføjet`);
+        if (res.skippedInvalid.length > 0)
+          parts.push(`${res.skippedInvalid.length} ugyldige`);
+        toast.message(`Sprang ${skipped} adresser over`, { description: parts.join(' · ') });
+      }
+      if (res.added.length > 0 || skipped === entries.length) {
+        setBulkText('');
+      }
+    } catch (err) {
+      setAddError(err instanceof ApiError ? err.message : 'Kunne ikke tilføje gæster.');
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  async function confirmDelete() {
+    if (!pendingRemoval) return;
+    const { id } = pendingRemoval;
+    setPendingRemoval(null);
+    try {
+      await api.deleteInvitee(adminToken, id);
+      setInvitees((prev) => (prev ?? []).filter((i) => i.id !== id));
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      toast.success('Gæst fjernet');
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Kunne ikke fjerne gæst.');
+    }
+  }
+
+  async function onSend(filter: 'unsent' | 'selected') {
+    if (sending) return;
+    const inviteeIds = filter === 'selected' ? Array.from(selectedIds) : null;
+    if (filter === 'selected' && inviteeIds!.length === 0) return;
+    setSending(true);
+    try {
+      const res = await api.sendInvitations(adminToken, {
+        inviteeIds,
+        onlyUnsent: filter === 'unsent',
+      });
+      if (res.enqueued === 0) {
+        toast.message('Ingen at sende til', {
+          description: filter === 'unsent' ? 'Alle har fået invitation.' : 'Vælg mindst én gæst.',
+        });
+      } else {
+        toast.success(
+          res.enqueued === 1
+            ? '1 invitation sendt'
+            : `${res.enqueued} invitationer sendt`,
+        );
+        if (filter === 'selected') setSelectedIds(new Set());
+        load();
+      }
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Kunne ikke sende invitationer.');
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <UserPlus className="text-muted-foreground size-4" />
+        <h2 className="font-serif text-xl tracking-tight">
+          Invitationer{' '}
+          <span className="text-muted-foreground text-sm font-normal">
+            ({invitees?.length ?? 0})
+          </span>
+        </h2>
+      </div>
+
+      <Card>
+        <CardContent className="space-y-4 pt-6">
+          <form onSubmit={onAdd} className="space-y-3">
+            <Field
+              label="Tilføj gæster"
+              htmlFor="bulk-invitees"
+              hint='En email pr. linje, eller fx "Anne Andersen &lt;anne@example.dk&gt;"'
+              error={addError ?? undefined}
+            >
+              <Textarea
+                id="bulk-invitees"
+                value={bulkText}
+                onChange={(e) => setBulkText(e.target.value)}
+                rows={4}
+                placeholder={`anne@example.dk\nBjarke Berg <bjarke@example.dk>`}
+              />
+            </Field>
+            <div className="flex justify-end">
+              <Button type="submit" disabled={adding} size="sm">
+                <UserPlus className="size-4" />
+                {adding ? 'Tilføjer…' : 'Tilføj'}
+              </Button>
+            </div>
+          </form>
+
+          {loadError && <p className="text-destructive text-sm">{loadError}</p>}
+
+          {invitees && invitees.length > 0 && (
+            <div className="space-y-3 pt-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
+                <div className="text-muted-foreground text-xs">
+                  {selectedIds.size > 0
+                    ? `${selectedIds.size} valgt`
+                    : unsentCount > 0
+                      ? `${unsentCount} har ikke fået invitation endnu`
+                      : 'Alle har fået invitation'}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {selectedIds.size > 0 ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => onSend('selected')}
+                      disabled={sending}
+                    >
+                      <Send className="size-4" />
+                      {sending ? 'Sender…' : `Gensend (${selectedIds.size})`}
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => onSend('unsent')}
+                      disabled={sending || unsentCount === 0}
+                    >
+                      <Send className="size-4" />
+                      {sending ? 'Sender…' : 'Send til ikke-sendte'}
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              <ul className="divide-border divide-y">
+                <AnimatePresence initial={false}>
+                  {invitees.map((inv) => {
+                    const selected = selectedIds.has(inv.id);
+                    return (
+                      <motion.li
+                        key={inv.id}
+                        layout
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, x: -12, transition: { duration: 0.18 } }}
+                        transition={{ duration: 0.22, ease: 'easeOut' }}
+                        className="flex items-start gap-3 py-3 first:pt-0 last:pb-0"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          onChange={() => toggleSelected(inv.id)}
+                          aria-label={`Vælg ${inv.email}`}
+                          className="border-input text-primary focus-visible:ring-ring/50 mt-1.5 size-4 cursor-pointer rounded border bg-transparent accent-current focus-visible:ring-2"
+                        />
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <div className="flex flex-wrap items-baseline gap-x-2">
+                            {inv.name ? (
+                              <span className="text-sm font-medium">{inv.name}</span>
+                            ) : null}
+                            <a
+                              href={`mailto:${inv.email}`}
+                              className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs"
+                            >
+                              <Mail className="size-3" />
+                              {inv.email}
+                            </a>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2 text-xs">
+                            {inv.lastSentAt ? (
+                              <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5">
+                                Sendt {formatRelative(inv.lastSentAt)}
+                                {inv.sendCount > 1 ? ` · ${inv.sendCount}×` : ''}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">Ikke sendt</span>
+                            )}
+                            {inv.rsvpStatus && <StatusBadge status={inv.rsvpStatus} />}
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-muted-foreground hover:text-destructive size-8"
+                          onClick={() => setPendingRemoval({ id: inv.id, email: inv.email })}
+                          aria-label={`Fjern ${inv.email}`}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </motion.li>
+                    );
+                  })}
+                </AnimatePresence>
+              </ul>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <AlertDialog
+        open={!!pendingRemoval}
+        onOpenChange={(open) => !open && setPendingRemoval(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Fjern fra invitationsliste?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingRemoval
+                ? `${pendingRemoval.email} fjernes fra invitationslisten for "${eventTitle}". Eksisterende svar bevares.`
+                : ''}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annullér</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>Fjern</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 }
