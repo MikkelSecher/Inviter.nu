@@ -248,20 +248,24 @@ export function CreateEventPage() {
               <Field label="Dit navn" htmlFor="organizerName">
                 <Input
                   id="organizerName"
+                  name="organizerName"
                   value={organizerName}
                   onChange={(e) => setOrganizerName(e.target.value)}
                   placeholder="Anne Andersen"
                   maxLength={200}
+                  autoComplete="off"
                 />
               </Field>
               <Field label="Din email" htmlFor="organizerEmail">
                 <Input
                   id="organizerEmail"
+                  name="organizerEmail"
                   type="email"
                   value={organizerEmail}
                   onChange={(e) => setOrganizerEmail(e.target.value)}
                   placeholder="dig@example.dk"
                   maxLength={320}
+                  autoComplete="off"
                 />
               </Field>
             </div>
