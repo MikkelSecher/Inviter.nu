@@ -10,6 +10,7 @@ import {
   MapPin,
   Pencil,
   Phone,
+  Plus,
   Send,
   Trash2,
   UserPlus,
@@ -598,18 +599,31 @@ function EditForm({
   );
 }
 
-function parseBulkInvitees(text: string): AddInviteeEntry[] {
-  const tokens = text
+type InviteeDraft = { rowId: string; name: string; email: string };
+
+function newDraft(seed: Partial<Omit<InviteeDraft, 'rowId'>> = {}): InviteeDraft {
+  return {
+    rowId:
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : Math.random().toString(36).slice(2),
+    name: seed.name ?? '',
+    email: seed.email ?? '',
+  };
+}
+
+function parseBulkPaste(text: string): { name: string; email: string }[] {
+  return text
     .split(/[\n,;]+/)
     .map((t) => t.trim())
-    .filter(Boolean);
-  return tokens.map((token) => {
-    const angleMatch = /^(.+?)\s*<([^>]+)>$/.exec(token);
-    if (angleMatch) {
-      return { name: angleMatch[1].trim() || null, email: angleMatch[2].trim() };
-    }
-    return { name: null, email: token };
-  });
+    .filter(Boolean)
+    .map((token) => {
+      const angleMatch = /^(.+?)\s*<([^>]+)>$/.exec(token);
+      if (angleMatch) {
+        return { name: angleMatch[1].trim(), email: angleMatch[2].trim() };
+      }
+      return { name: '', email: token };
+    });
 }
 
 function formatRelative(iso: string): string {
@@ -631,7 +645,7 @@ function InviteeSection({
 }) {
   const [invitees, setInvitees] = useState<Invitee[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [bulkText, setBulkText] = useState('');
+  const [drafts, setDrafts] = useState<InviteeDraft[]>(() => [newDraft()]);
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -668,12 +682,52 @@ function InviteeSection({
     });
   }
 
+  function updateDraft(rowId: string, field: 'name' | 'email', value: string) {
+    setDrafts((prev) => prev.map((d) => (d.rowId === rowId ? { ...d, [field]: value } : d)));
+  }
+
+  function addRow() {
+    setDrafts((prev) => [...prev, newDraft()]);
+  }
+
+  function removeRow(rowId: string) {
+    setDrafts((prev) => {
+      const next = prev.filter((d) => d.rowId !== rowId);
+      return next.length === 0 ? [newDraft()] : next;
+    });
+  }
+
+  function handlePaste(rowId: string, field: 'name' | 'email', e: React.ClipboardEvent<HTMLInputElement>) {
+    const text = e.clipboardData.getData('text');
+    if (!/[\n,;]/.test(text)) return;
+    e.preventDefault();
+    const parsed = parseBulkPaste(text);
+    if (parsed.length === 0) return;
+    setDrafts((prev) => {
+      const idx = prev.findIndex((d) => d.rowId === rowId);
+      if (idx === -1) return prev;
+      const target = prev[idx];
+      const targetMerged: InviteeDraft = {
+        ...target,
+        name: field === 'name' && parsed[0].name ? parsed[0].name : target.name || parsed[0].name,
+        email: field === 'email' ? parsed[0].email : target.email,
+      };
+      if (field === 'name' && !target.email) {
+        targetMerged.email = parsed[0].email;
+      }
+      const rest = parsed.slice(1).map((p) => newDraft({ name: p.name, email: p.email }));
+      return [...prev.slice(0, idx), targetMerged, ...rest, ...prev.slice(idx + 1)];
+    });
+  }
+
   async function onAdd(e: FormEvent) {
     e.preventDefault();
     setAddError(null);
-    const entries = parseBulkInvitees(bulkText);
+    const entries: AddInviteeEntry[] = drafts
+      .map((d) => ({ name: d.name.trim() || null, email: d.email.trim() }))
+      .filter((entry) => entry.email.length > 0);
     if (entries.length === 0) {
-      setAddError('Indtast mindst én email-adresse.');
+      setAddError('Tilføj mindst én email-adresse.');
       return;
     }
     setAdding(true);
@@ -697,7 +751,7 @@ function InviteeSection({
         toast.message(`Sprang ${skipped} adresser over`, { description: parts.join(' · ') });
       }
       if (res.added.length > 0 || skipped === entries.length) {
-        setBulkText('');
+        setDrafts([newDraft()]);
       }
     } catch (err) {
       setAddError(err instanceof ApiError ? err.message : 'Kunne ikke tilføje gæster.');
@@ -769,21 +823,70 @@ function InviteeSection({
       <Card>
         <CardContent className="space-y-4 pt-6">
           <form onSubmit={onAdd} className="space-y-3">
-            <Field
-              label="Tilføj gæster"
-              htmlFor="bulk-invitees"
-              hint='En email pr. linje, eller fx "Anne Andersen &lt;anne@example.dk&gt;"'
-              error={addError ?? undefined}
-            >
-              <Textarea
-                id="bulk-invitees"
-                value={bulkText}
-                onChange={(e) => setBulkText(e.target.value)}
-                rows={4}
-                placeholder={`anne@example.dk\nBjarke Berg <bjarke@example.dk>`}
-              />
-            </Field>
-            <div className="flex justify-end">
+            <div className="space-y-1.5">
+              <div className="flex items-baseline justify-between">
+                <Label className="text-sm font-medium">Tilføj gæster</Label>
+                <span className="text-muted-foreground text-xs">
+                  Du kan også indsætte en liste — vi splitter på linjeskift og komma.
+                </span>
+              </div>
+              <div className="hidden grid-cols-[1fr_1.4fr_auto] gap-2 px-1 sm:grid">
+                <div className="text-muted-foreground text-xs">Navn (valgfri)</div>
+                <div className="text-muted-foreground text-xs">Email</div>
+                <div />
+              </div>
+              <div className="space-y-2">
+                <AnimatePresence initial={false}>
+                  {drafts.map((draft) => (
+                    <motion.div
+                      key={draft.rowId}
+                      layout
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, x: -8, transition: { duration: 0.15 } }}
+                      transition={{ duration: 0.2, ease: 'easeOut' }}
+                      className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[1fr_1.4fr_auto]"
+                    >
+                      <Input
+                        value={draft.name}
+                        onChange={(e) => updateDraft(draft.rowId, 'name', e.target.value)}
+                        onPaste={(e) => handlePaste(draft.rowId, 'name', e)}
+                        placeholder="Navn"
+                        maxLength={200}
+                        autoComplete="off"
+                        className="col-span-2 sm:col-span-1"
+                      />
+                      <Input
+                        type="email"
+                        value={draft.email}
+                        onChange={(e) => updateDraft(draft.rowId, 'email', e.target.value)}
+                        onPaste={(e) => handlePaste(draft.rowId, 'email', e)}
+                        placeholder="email@example.dk"
+                        maxLength={320}
+                        autoComplete="off"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeRow(draft.rowId)}
+                        disabled={drafts.length === 1 && !draft.name && !draft.email}
+                        aria-label="Fjern linje"
+                        className="text-muted-foreground hover:text-destructive size-8"
+                      >
+                        <X className="size-4" />
+                      </Button>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+              {addError && <p className="text-destructive text-xs">{addError}</p>}
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Button type="button" variant="ghost" size="sm" onClick={addRow}>
+                <Plus className="size-4" />
+                Endnu en linje
+              </Button>
               <Button type="submit" disabled={adding} size="sm">
                 <UserPlus className="size-4" />
                 {adding ? 'Tilføjer…' : 'Tilføj'}
