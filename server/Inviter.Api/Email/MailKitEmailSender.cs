@@ -38,7 +38,7 @@ public class MailKitEmailSender : IEmailSender
         mime.Body = body.ToMessageBody();
 
         using var client = new SmtpClient();
-        var secureSocketOptions = opt.UseStartTls ? SecureSocketOptions.StartTls : SecureSocketOptions.Auto;
+        var secureSocketOptions = opt.UseStartTls ? SecureSocketOptions.StartTls : SecureSocketOptions.None;
         await client.ConnectAsync(opt.SmtpHost, opt.SmtpPort, secureSocketOptions, ct);
         if (!string.IsNullOrEmpty(opt.SmtpUser))
         {
