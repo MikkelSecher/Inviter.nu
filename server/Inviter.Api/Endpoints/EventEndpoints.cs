@@ -81,7 +81,12 @@ public static class EventEndpoints
             ev.AllowMaybe, ev.RsvpDeadline, ev.ContactRequirement));
     }
 
-    private static async Task<IResult> SubmitRsvp(string inviteToken, CreateRsvpRequest req, AppDbContext db)
+    private static async Task<IResult> SubmitRsvp(
+        string inviteToken,
+        CreateRsvpRequest req,
+        AppDbContext db,
+        IEmailQueue emailQueue,
+        IOptions<AppOptions> appOptions)
     {
         if (string.IsNullOrWhiteSpace(req.GuestName))
             return Results.ValidationProblem(new Dictionary<string, string[]>
@@ -146,6 +151,16 @@ public static class EventEndpoints
         };
         db.Rsvps.Add(rsvp);
         await db.SaveChangesAsync();
+
+        var baseUrl = appOptions.Value.BaseUrl;
+        if (!string.IsNullOrEmpty(rsvp.Email))
+        {
+            emailQueue.Enqueue(RsvpConfirmationTemplate.Build(ev, rsvp, baseUrl));
+        }
+        if (!string.IsNullOrEmpty(ev.OrganizerEmail))
+        {
+            emailQueue.Enqueue(RsvpNotificationTemplate.Build(ev, rsvp, baseUrl));
+        }
 
         return Results.Ok(new RsvpDto(
             rsvp.Id, rsvp.GuestName, rsvp.Status, rsvp.Comment,
