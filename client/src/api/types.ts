@@ -76,3 +76,33 @@ export interface CreateRsvpInput {
   email: string | null;
   phone: string | null;
 }
+
+export interface Invitee {
+  id: string;
+  email: string;
+  name: string | null;
+  addedAt: string;
+  lastSentAt: string | null;
+  sendCount: number;
+  rsvpStatus: RsvpStatus | null;
+}
+
+export interface AddInviteeEntry {
+  email: string;
+  name: string | null;
+}
+
+export interface AddInviteesResponse {
+  added: Invitee[];
+  skippedDuplicates: string[];
+  skippedInvalid: string[];
+}
+
+export interface SendInvitationsInput {
+  inviteeIds: string[] | null;
+  onlyUnsent: boolean;
+}
+
+export interface SendInvitationsResponse {
+  enqueued: number;
+}

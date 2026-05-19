@@ -9,6 +9,7 @@ public class AppDbContext : DbContext
 
     public DbSet<Event> Events => Set<Event>();
     public DbSet<Rsvp> Rsvps => Set<Rsvp>();
+    public DbSet<Invitee> Invitees => Set<Invitee>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -29,6 +30,10 @@ public class AppDbContext : DbContext
                 .WithOne(r => r.Event!)
                 .HasForeignKey(r => r.EventId)
                 .OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(x => x.Invitees)
+                .WithOne(i => i.Event!)
+                .HasForeignKey(i => i.EventId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Rsvp>(r =>
@@ -39,6 +44,13 @@ public class AppDbContext : DbContext
             r.Property(x => x.Email).HasMaxLength(200);
             r.Property(x => x.Phone).HasMaxLength(50);
             r.HasIndex(x => x.EventId);
+        });
+
+        modelBuilder.Entity<Invitee>(i =>
+        {
+            i.Property(x => x.Email).IsRequired().HasMaxLength(320);
+            i.Property(x => x.Name).HasMaxLength(200);
+            i.HasIndex(x => new { x.EventId, x.Email }).IsUnique();
         });
     }
 }

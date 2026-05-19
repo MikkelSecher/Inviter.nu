@@ -19,4 +19,5 @@ public class Event
     public string? OrganizerName { get; set; }
 
     public List<Rsvp> Rsvps { get; set; } = new();
+    public List<Invitee> Invitees { get; set; } = new();
 }

@@ -1,10 +1,15 @@
 import type {
+  AddInviteeEntry,
+  AddInviteesResponse,
   CreateEventInput,
   CreateRsvpInput,
   EventAdmin,
   EventCreated,
   EventPublic,
+  Invitee,
   Rsvp,
+  SendInvitationsInput,
+  SendInvitationsResponse,
 } from './types';
 
 export class ApiError extends Error {
@@ -66,5 +71,26 @@ export const api = {
     request<void>(
       `/api/manage/${encodeURIComponent(adminToken)}/rsvp/${encodeURIComponent(rsvpId)}`,
       { method: 'DELETE' },
+    ),
+
+  listInvitees: (adminToken: string) =>
+    request<Invitee[]>(`/api/manage/${encodeURIComponent(adminToken)}/invitees`),
+
+  addInvitees: (adminToken: string, entries: AddInviteeEntry[]) =>
+    request<AddInviteesResponse>(
+      `/api/manage/${encodeURIComponent(adminToken)}/invitees`,
+      { method: 'POST', body: JSON.stringify({ entries }) },
+    ),
+
+  deleteInvitee: (adminToken: string, inviteeId: string) =>
+    request<void>(
+      `/api/manage/${encodeURIComponent(adminToken)}/invitees/${encodeURIComponent(inviteeId)}`,
+      { method: 'DELETE' },
+    ),
+
+  sendInvitations: (adminToken: string, input: SendInvitationsInput) =>
+    request<SendInvitationsResponse>(
+      `/api/manage/${encodeURIComponent(adminToken)}/invitees/send`,
+      { method: 'POST', body: JSON.stringify(input) },
     ),
 };
