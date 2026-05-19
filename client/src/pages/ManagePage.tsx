@@ -366,6 +366,8 @@ function EditForm({
   const [contactRequirement, setContactRequirement] = useState<ContactRequirement>(
     event.contactRequirement,
   );
+  const [organizerName, setOrganizerName] = useState(event.organizerName ?? '');
+  const [organizerEmail, setOrganizerEmail] = useState(event.organizerEmail ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -394,6 +396,8 @@ function EditForm({
         allowMaybe,
         rsvpDeadline: rsvpDeadline ? fromDatetimeLocalValue(rsvpDeadline) : null,
         contactRequirement,
+        organizerName: organizerName.trim() || null,
+        organizerEmail: organizerEmail.trim() || null,
       });
       updateRememberedTitle(event.id, title.trim());
       onSaved();
@@ -527,6 +531,35 @@ function EditForm({
                 </div>
               ))}
             </RadioGroup>
+          </div>
+
+          <div className="border-border/70 space-y-4 rounded-lg border p-4">
+            <div className="space-y-0.5">
+              <Label className="text-sm font-medium">Dig som arrangør (valgfrit)</Label>
+              <p className="text-muted-foreground text-xs">
+                Hvis du oplyser din email, sender vi notifikationer om svar — og du kan altid bruge
+                den til at få admin-linket sendt igen.
+              </p>
+            </div>
+            <Field label="Dit navn" htmlFor="edit-organizerName">
+              <Input
+                id="edit-organizerName"
+                value={organizerName}
+                onChange={(e) => setOrganizerName(e.target.value)}
+                placeholder="Anne Andersen"
+                maxLength={200}
+              />
+            </Field>
+            <Field label="Din email" htmlFor="edit-organizerEmail">
+              <Input
+                id="edit-organizerEmail"
+                type="email"
+                value={organizerEmail}
+                onChange={(e) => setOrganizerEmail(e.target.value)}
+                placeholder="dig@example.dk"
+                maxLength={320}
+              />
+            </Field>
           </div>
 
           {error && <p className="text-destructive text-sm">{error}</p>}

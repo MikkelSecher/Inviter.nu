@@ -15,5 +15,8 @@ public class Event
     public DateTime? RsvpDeadline { get; set; }
     public ContactRequirement ContactRequirement { get; set; }
 
+    public string? OrganizerEmail { get; set; }
+    public string? OrganizerName { get; set; }
+
     public List<Rsvp> Rsvps { get; set; } = new();
 }

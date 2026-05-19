@@ -9,7 +9,9 @@ public record CreateEventRequest(
     DateTime StartsAt,
     bool AllowMaybe,
     DateTime? RsvpDeadline,
-    ContactRequirement ContactRequirement);
+    ContactRequirement ContactRequirement,
+    string? OrganizerEmail,
+    string? OrganizerName);
 
 public record UpdateEventRequest(
     string Title,
@@ -18,7 +20,9 @@ public record UpdateEventRequest(
     DateTime StartsAt,
     bool AllowMaybe,
     DateTime? RsvpDeadline,
-    ContactRequirement ContactRequirement);
+    ContactRequirement ContactRequirement,
+    string? OrganizerEmail,
+    string? OrganizerName);
 
 public record EventPublicDto(
     Guid Id,
@@ -42,7 +46,9 @@ public record EventCreatedDto(
     DateTime CreatedAt,
     bool AllowMaybe,
     DateTime? RsvpDeadline,
-    ContactRequirement ContactRequirement);
+    ContactRequirement ContactRequirement,
+    string? OrganizerEmail,
+    string? OrganizerName);
 
 public record EventAdminDto(
     Guid Id,
@@ -56,6 +62,8 @@ public record EventAdminDto(
     bool AllowMaybe,
     DateTime? RsvpDeadline,
     ContactRequirement ContactRequirement,
+    string? OrganizerEmail,
+    string? OrganizerName,
     IReadOnlyList<RsvpDto> Rsvps);
 
 public record RsvpDto(

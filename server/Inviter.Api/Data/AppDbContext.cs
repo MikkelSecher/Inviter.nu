@@ -21,6 +21,8 @@ public class AppDbContext : DbContext
             e.Property(x => x.AdminToken).IsRequired().HasMaxLength(128);
             e.Property(x => x.AllowMaybe).HasDefaultValue(true);
             e.Property(x => x.ContactRequirement).HasConversion<int>().HasDefaultValue(ContactRequirement.None);
+            e.Property(x => x.OrganizerEmail).HasMaxLength(320);
+            e.Property(x => x.OrganizerName).HasMaxLength(200);
             e.HasIndex(x => x.InviteToken).IsUnique();
             e.HasIndex(x => x.AdminToken).IsUnique();
             e.HasMany(x => x.Rsvps)

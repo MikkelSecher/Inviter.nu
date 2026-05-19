@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Inviter.Api.Data;
+using Inviter.Api.Email;
 using Inviter.Api.Endpoints;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,6 +24,12 @@ builder.Services.AddCors(o => o.AddPolicy(DevCorsPolicy, p => p
     .AllowAnyMethod()));
 
 builder.Services.AddOpenApi();
+
+builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("Email"));
+builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("App"));
+builder.Services.AddScoped<IEmailSender, MailKitEmailSender>();
+builder.Services.AddSingleton<IEmailQueue, ChannelEmailQueue>();
+builder.Services.AddHostedService<EmailDispatcher>();
 
 var app = builder.Build();
 
