@@ -74,7 +74,7 @@ export function DateTimePicker({
     : undefined;
 
   return (
-    <div className="border-border bg-card inline-flex w-fit flex-col overflow-hidden rounded-lg border">
+    <div className="border-border bg-card mx-auto flex w-fit flex-col overflow-hidden rounded-lg border">
       <Calendar
         mode="single"
         selected={date}
