@@ -26,6 +26,8 @@ export function CreateEventPage() {
   const [rsvpDeadline, setRsvpDeadline] = useState('');
   const [showDeadline, setShowDeadline] = useState(false);
   const [contactRequirement, setContactRequirement] = useState<ContactRequirement>('None');
+  const [organizerName, setOrganizerName] = useState('');
+  const [organizerEmail, setOrganizerEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,6 +56,8 @@ export function CreateEventPage() {
         allowMaybe,
         rsvpDeadline: rsvpDeadline ? fromDatetimeLocalValue(rsvpDeadline) : null,
         contactRequirement,
+        organizerName: organizerName.trim() || null,
+        organizerEmail: organizerEmail.trim() || null,
       });
       rememberEvent({
         id: created.id,
@@ -231,6 +235,35 @@ export function CreateEventPage() {
                   </div>
                 ))}
               </RadioGroup>
+            </div>
+
+            <div className="border-border/70 space-y-4 rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <Label className="text-sm font-medium">Dig som arrangør (valgfrit)</Label>
+                <p className="text-muted-foreground text-xs">
+                  Hvis du oplyser din email, sender vi dit admin-link dertil — så du altid kan finde
+                  tilbage til eventet, også fra en anden enhed.
+                </p>
+              </div>
+              <Field label="Dit navn" htmlFor="organizerName">
+                <Input
+                  id="organizerName"
+                  value={organizerName}
+                  onChange={(e) => setOrganizerName(e.target.value)}
+                  placeholder="Anne Andersen"
+                  maxLength={200}
+                />
+              </Field>
+              <Field label="Din email" htmlFor="organizerEmail">
+                <Input
+                  id="organizerEmail"
+                  type="email"
+                  value={organizerEmail}
+                  onChange={(e) => setOrganizerEmail(e.target.value)}
+                  placeholder="dig@example.dk"
+                  maxLength={320}
+                />
+              </Field>
             </div>
 
             {error && <p className="text-destructive text-sm">{error}</p>}

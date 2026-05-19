@@ -3,7 +3,26 @@
 # (eller behold filen ude af serveren; `-f`-syntaksen er sikrere).
 #
 # Grunden: http.sys på Windows holder port 80, så vi mapper til 8080 lokalt.
+# Mailhog opfanger alle udgående SMTP-mails så vi ikke spammer rigtige adresser
+# under udvikling. UI på http://localhost:8025.
 services:
   web:
     ports: !override
       - "8080:80"
+
+  api:
+    environment:
+      Email__SmtpHost: mailhog
+      Email__SmtpPort: 1025
+      Email__SmtpUser: ""
+      Email__SmtpPassword: ""
+      Email__UseStartTls: "false"
+      App__BaseUrl: http://localhost:8080
+    depends_on:
+      - mailhog
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    ports:
+      - "8025:8025"
+    restart: unless-stopped

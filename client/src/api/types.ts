@@ -36,6 +36,8 @@ export interface EventAdmin {
   allowMaybe: boolean;
   rsvpDeadline: string | null;
   contactRequirement: ContactRequirement;
+  organizerEmail: string | null;
+  organizerName: string | null;
   rsvps: Rsvp[];
 }
 
@@ -51,6 +53,8 @@ export interface EventCreated {
   allowMaybe: boolean;
   rsvpDeadline: string | null;
   contactRequirement: ContactRequirement;
+  organizerEmail: string | null;
+  organizerName: string | null;
 }
 
 export interface CreateEventInput {
@@ -61,6 +65,8 @@ export interface CreateEventInput {
   allowMaybe: boolean;
   rsvpDeadline: string | null;
   contactRequirement: ContactRequirement;
+  organizerEmail: string | null;
+  organizerName: string | null;
 }
 
 export interface CreateRsvpInput {

@@ -6,6 +6,14 @@ services:
       ASPNETCORE_URLS: http://0.0.0.0:8080
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__Default: "Data Source=/data/inviter.db"
+      Email__SmtpHost: ${SMTP_HOST:-}
+      Email__SmtpPort: ${SMTP_PORT:-587}
+      Email__SmtpUser: ${SMTP_USER:-}
+      Email__SmtpPassword: ${SMTP_PASSWORD:-}
+      Email__FromAddress: ${MAIL_FROM:-noreply@inviter.nu}
+      Email__FromName: ${MAIL_FROM_NAME:-Inviter}
+      Email__UseStartTls: ${SMTP_STARTTLS:-true}
+      App__BaseUrl: ${APP_BASE_URL:-https://inviter.nu}
     volumes:
       - inviter-data:/data
     expose:

@@ -15,14 +15,35 @@ jobs:
     steps:
       - name: Deploy to Hetzner via SSH
         uses: appleboy/ssh-action@v1.2.0
+        env:
+          SITE_ADDRESS: ${{ secrets.SITE_ADDRESS }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+          MAIL_FROM_NAME: ${{ secrets.MAIL_FROM_NAME }}
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
+          envs: SITE_ADDRESS,SMTP_HOST,SMTP_PORT,SMTP_USER,SMTP_PASSWORD,MAIL_FROM,MAIL_FROM_NAME,APP_BASE_URL
           script: |
             set -e
             cd /opt/Inviter.nu
             git fetch origin main
             git reset --hard origin/main
+            cat > .env <<EOF
+            SITE_ADDRESS=${SITE_ADDRESS}
+            SMTP_HOST=${SMTP_HOST}
+            SMTP_PORT=${SMTP_PORT}
+            SMTP_USER=${SMTP_USER}
+            SMTP_PASSWORD=${SMTP_PASSWORD}
+            MAIL_FROM=${MAIL_FROM}
+            MAIL_FROM_NAME=${MAIL_FROM_NAME}
+            APP_BASE_URL=${APP_BASE_URL}
+            EOF
+            chmod 600 .env
             docker compose -f docker-compose.yml up -d --build
             docker image prune -f

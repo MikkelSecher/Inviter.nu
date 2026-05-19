@@ -1,8 +1,11 @@
 using Inviter.Api.Contracts;
 using Inviter.Api.Data;
 using Inviter.Api.Domain;
+using Inviter.Api.Email;
+using Inviter.Api.Email.Templates;
 using Inviter.Api.Tokens;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Inviter.Api.Endpoints;
 
@@ -20,10 +23,18 @@ public static class EventEndpoints
         api.MapDelete("/manage/{adminToken}/rsvp/{rsvpId:guid}", DeleteRsvp);
     }
 
-    private static async Task<IResult> CreateEvent(CreateEventRequest req, AppDbContext db)
+    private static async Task<IResult> CreateEvent(
+        CreateEventRequest req,
+        AppDbContext db,
+        IEmailQueue emailQueue,
+        IOptions<AppOptions> appOptions)
     {
-        var errors = ValidateEventOptions(req.Title, req.StartsAt, req.RsvpDeadline, req.ContactRequirement);
+        var errors = ValidateEventOptions(
+            req.Title, req.StartsAt, req.RsvpDeadline, req.ContactRequirement, req.OrganizerEmail);
         if (errors is not null) return Results.ValidationProblem(errors);
+
+        var organizerEmail = NormalizeOrganizerEmail(req.OrganizerEmail);
+        var organizerName = NormalizeOptional(req.OrganizerName);
 
         var ev = new Event
         {
@@ -39,16 +50,24 @@ public static class EventEndpoints
             RsvpDeadline = req.RsvpDeadline.HasValue
                 ? DateTime.SpecifyKind(req.RsvpDeadline.Value, DateTimeKind.Utc)
                 : null,
-            ContactRequirement = req.ContactRequirement
+            ContactRequirement = req.ContactRequirement,
+            OrganizerEmail = organizerEmail,
+            OrganizerName = organizerName
         };
 
         db.Events.Add(ev);
         await db.SaveChangesAsync();
 
+        if (!string.IsNullOrEmpty(ev.OrganizerEmail))
+        {
+            emailQueue.Enqueue(AdminLinkTemplate.Build(ev, appOptions.Value.BaseUrl));
+        }
+
         return Results.Created($"/api/manage/{ev.AdminToken}", new EventCreatedDto(
             ev.Id, ev.Title, ev.Description, ev.Location, ev.StartsAt,
             ev.InviteToken, ev.AdminToken, ev.CreatedAt,
-            ev.AllowMaybe, ev.RsvpDeadline, ev.ContactRequirement));
+            ev.AllowMaybe, ev.RsvpDeadline, ev.ContactRequirement,
+            ev.OrganizerEmail, ev.OrganizerName));
     }
 
     private static async Task<IResult> GetByInviteToken(string inviteToken, AppDbContext db)
@@ -149,12 +168,14 @@ public static class EventEndpoints
             ev.Id, ev.Title, ev.Description, ev.Location, ev.StartsAt,
             ev.InviteToken, ev.AdminToken, ev.CreatedAt,
             ev.AllowMaybe, ev.RsvpDeadline, ev.ContactRequirement,
+            ev.OrganizerEmail, ev.OrganizerName,
             rsvps));
     }
 
     private static async Task<IResult> UpdateByAdminToken(string adminToken, UpdateEventRequest req, AppDbContext db)
     {
-        var errors = ValidateEventOptions(req.Title, req.StartsAt, req.RsvpDeadline, req.ContactRequirement);
+        var errors = ValidateEventOptions(
+            req.Title, req.StartsAt, req.RsvpDeadline, req.ContactRequirement, req.OrganizerEmail);
         if (errors is not null) return Results.ValidationProblem(errors);
 
         var ev = await db.Events.FirstOrDefaultAsync(x => x.AdminToken == adminToken);
@@ -169,6 +190,8 @@ public static class EventEndpoints
             ? DateTime.SpecifyKind(req.RsvpDeadline.Value, DateTimeKind.Utc)
             : null;
         ev.ContactRequirement = req.ContactRequirement;
+        ev.OrganizerEmail = NormalizeOrganizerEmail(req.OrganizerEmail);
+        ev.OrganizerName = NormalizeOptional(req.OrganizerName);
         await db.SaveChangesAsync();
 
         return Results.NoContent();
@@ -188,7 +211,8 @@ public static class EventEndpoints
     }
 
     private static Dictionary<string, string[]>? ValidateEventOptions(
-        string title, DateTime startsAt, DateTime? rsvpDeadline, ContactRequirement contactRequirement)
+        string title, DateTime startsAt, DateTime? rsvpDeadline, ContactRequirement contactRequirement,
+        string? organizerEmail)
     {
         var errors = new Dictionary<string, string[]>();
 
@@ -201,7 +225,23 @@ public static class EventEndpoints
         if (!Enum.IsDefined(typeof(ContactRequirement), contactRequirement))
             errors["contactRequirement"] = new[] { "Ugyldigt kontaktkrav." };
 
+        var trimmedOrganizerEmail = organizerEmail?.Trim();
+        if (!string.IsNullOrEmpty(trimmedOrganizerEmail) && !LooksLikeEmail(trimmedOrganizerEmail))
+            errors["organizerEmail"] = new[] { "Din email skal være en gyldig email-adresse." };
+
         return errors.Count == 0 ? null : errors;
+    }
+
+    private static string? NormalizeOrganizerEmail(string? value)
+    {
+        var trimmed = value?.Trim();
+        return string.IsNullOrEmpty(trimmed) ? null : trimmed;
+    }
+
+    private static string? NormalizeOptional(string? value)
+    {
+        var trimmed = value?.Trim();
+        return string.IsNullOrEmpty(trimmed) ? null : trimmed;
     }
 
     private static bool LooksLikeEmail(string s)
