@@ -512,18 +512,19 @@ function EditForm({
                   { v: 'Phone', label: 'Telefon' },
                 ] as const
               ).map((opt) => (
-                <Label
-                  key={opt.v}
-                  htmlFor={`edit-contact-${opt.v}`}
-                  className="border-border bg-background hover:bg-accent/50 has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary has-[[data-state=checked]]:text-primary-foreground flex cursor-pointer items-center justify-center gap-2 rounded-md border px-3 py-2.5 text-sm font-medium transition-colors"
-                >
+                <div key={opt.v} className="relative">
                   <RadioGroupItem
                     id={`edit-contact-${opt.v}`}
                     value={opt.v}
-                    className="sr-only"
+                    className="peer sr-only"
                   />
-                  {opt.label}
-                </Label>
+                  <Label
+                    htmlFor={`edit-contact-${opt.v}`}
+                    className="border-border bg-background hover:bg-accent/50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary peer-data-[state=checked]:text-primary-foreground flex cursor-pointer items-center justify-center gap-0 rounded-md border px-3 py-2.5 text-sm font-medium transition-colors"
+                  >
+                    {opt.label}
+                  </Label>
+                </div>
               ))}
             </RadioGroup>
           </div>
