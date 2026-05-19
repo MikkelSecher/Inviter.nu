@@ -529,7 +529,7 @@ function EditForm({
           </div>
 
           {error && <p className="text-destructive text-sm">{error}</p>}
-          <div className="flex gap-2 pt-1">
+          <div className="flex justify-center gap-2 pt-1">
             <Button type="submit" disabled={saving}>
               {saving ? 'Gemmer…' : 'Gem'}
             </Button>

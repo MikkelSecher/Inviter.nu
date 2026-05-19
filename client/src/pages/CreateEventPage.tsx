@@ -230,7 +230,7 @@ export function CreateEventPage() {
 
             {error && <p className="text-destructive text-sm">{error}</p>}
 
-            <div className="pt-2">
+            <div className="flex justify-center pt-2">
               <Button type="submit" disabled={submitting} size="lg">
                 {submitting ? 'Opretter…' : 'Opret event'}
               </Button>

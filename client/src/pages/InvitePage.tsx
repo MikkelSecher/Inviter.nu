@@ -311,7 +311,7 @@ export function InvitePage() {
 
                   {error && <p className="text-destructive text-sm">{error}</p>}
 
-                  <div className="pt-1">
+                  <div className="flex justify-center pt-1">
                     <Button type="submit" disabled={submitting} size="lg">
                       {submitting ? 'Sender…' : 'Send tilbagemelding'}
                     </Button>
