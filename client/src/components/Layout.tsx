@@ -20,7 +20,7 @@ export function Layout() {
             className="font-serif text-xl tracking-tight"
             style={{ fontVariationSettings: '"opsz" 144' }}
           >
-            Inviter
+            Invitér nu
           </Link>
           <nav className="flex items-center gap-1 text-sm">
             <NavLink
