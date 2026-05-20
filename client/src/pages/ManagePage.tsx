@@ -529,13 +529,12 @@ function EditForm({
             <RadioGroup
               value={contactRequirement}
               onValueChange={(v) => setContactRequirement(v as ContactRequirement)}
-              className="grid grid-cols-3 gap-2 pt-1"
+              className="grid grid-cols-2 gap-2 pt-1"
             >
               {(
                 [
                   { v: 'None', label: 'Ingen' },
                   { v: 'Email', label: 'Email' },
-                  { v: 'Phone', label: 'Telefon' },
                 ] as const
               ).map((opt) => (
                 <div key={opt.v} className="relative">

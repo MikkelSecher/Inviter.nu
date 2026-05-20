@@ -206,18 +206,17 @@ export function CreateEventPage() {
             <div className="space-y-2">
               <Label className="text-sm font-medium">Kontaktoplysninger fra gæsten</Label>
               <p className="text-muted-foreground text-xs">
-                Vælg om gæsten skal opgive email eller telefonnummer ved tilmelding.
+                Vælg om gæsten skal opgive email ved tilmelding.
               </p>
               <RadioGroup
                 value={contactRequirement}
                 onValueChange={(v) => setContactRequirement(v as ContactRequirement)}
-                className="grid grid-cols-3 gap-2 pt-1"
+                className="grid grid-cols-2 gap-2 pt-1"
               >
                 {(
                   [
                     { v: 'None', label: 'Ingen' },
                     { v: 'Email', label: 'Email' },
-                    { v: 'Phone', label: 'Telefon' },
                   ] as const
                 ).map((opt) => (
                   <div key={opt.v} className="relative">
