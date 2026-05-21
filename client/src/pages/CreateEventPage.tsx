@@ -258,13 +258,13 @@ export function CreateEventPage() {
               <Field label="Din email" htmlFor="organizerEmail">
                 <Input
                   id="organizerEmail"
-                  name="organizerEmail"
+                  name="email"
                   type="email"
                   value={organizerEmail}
                   onChange={(e) => setOrganizerEmail(e.target.value)}
                   placeholder="dig@example.dk"
                   maxLength={320}
-                  autoComplete="off"
+                  autoComplete="email"
                 />
               </Field>
             </div>

@@ -267,12 +267,14 @@ export function InvitePage() {
                     >
                       <Input
                         id="email"
+                        name="email"
                         type="email"
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="dig@example.dk"
                         maxLength={200}
+                        autoComplete="email"
                       />
                     </Field>
                   )}

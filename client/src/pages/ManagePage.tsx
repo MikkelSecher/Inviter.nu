@@ -574,11 +574,13 @@ function EditForm({
             <Field label="Din email" htmlFor="edit-organizerEmail">
               <Input
                 id="edit-organizerEmail"
+                name="email"
                 type="email"
                 value={organizerEmail}
                 onChange={(e) => setOrganizerEmail(e.target.value)}
                 placeholder="dig@example.dk"
                 maxLength={320}
+                autoComplete="email"
               />
             </Field>
           </div>
@@ -863,6 +865,9 @@ function InviteeSection({
                         placeholder="email@example.dk"
                         maxLength={320}
                         autoComplete="off"
+                        data-1p-ignore
+                        data-lpignore="true"
+                        data-bwignore
                       />
                       <Button
                         type="button"
