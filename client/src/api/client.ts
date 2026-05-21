@@ -7,6 +7,7 @@ import type {
   EventCreated,
   EventPublic,
   Invitee,
+  InviteePrefill,
   Rsvp,
   SendInvitationsInput,
   SendInvitationsResponse,
@@ -51,6 +52,11 @@ export const api = {
 
   getInvite: (inviteToken: string) =>
     request<EventPublic>(`/api/invite/${encodeURIComponent(inviteToken)}`),
+
+  getInviteePrefill: (inviteToken: string, inviteeId: string) =>
+    request<InviteePrefill>(
+      `/api/invite/${encodeURIComponent(inviteToken)}/invitee/${encodeURIComponent(inviteeId)}`,
+    ),
 
   submitRsvp: (inviteToken: string, input: CreateRsvpInput) =>
     request<Rsvp>(`/api/invite/${encodeURIComponent(inviteToken)}/rsvp`, {

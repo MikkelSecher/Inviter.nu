@@ -17,6 +17,7 @@ public static class EventEndpoints
 
         api.MapPost("/events", CreateEvent);
         api.MapGet("/invite/{inviteToken}", GetByInviteToken);
+        api.MapGet("/invite/{inviteToken}/invitee/{inviteeId:guid}", GetInviteePrefill);
         api.MapPost("/invite/{inviteToken}/rsvp", SubmitRsvp);
         api.MapGet("/manage/{adminToken}", GetByAdminToken);
         api.MapPut("/manage/{adminToken}", UpdateByAdminToken);
@@ -83,6 +84,15 @@ public static class EventEndpoints
         return Results.Ok(new EventPublicDto(
             ev.Id, ev.Title, ev.Description, ev.Location, ev.StartsAt, ev.InviteToken,
             ev.AllowMaybe, ev.RsvpDeadline, ev.ContactRequirement));
+    }
+
+    private static async Task<IResult> GetInviteePrefill(string inviteToken, Guid inviteeId, AppDbContext db)
+    {
+        var prefill = await db.Invitees.AsNoTracking()
+            .Where(i => i.Id == inviteeId && i.Event.InviteToken == inviteToken)
+            .Select(i => new InviteePrefillDto(i.Name, i.Email))
+            .FirstOrDefaultAsync();
+        return prefill is null ? Results.NotFound() : Results.Ok(prefill);
     }
 
     private static async Task<IResult> SubmitRsvp(

@@ -10,7 +10,7 @@ public static class InvitationTemplate
 
     public static QueuedEmail Build(Event ev, Invitee invitee, string baseUrl, bool isResend)
     {
-        var inviteUrl = $"{baseUrl.TrimEnd('/')}/invite/{ev.InviteToken}";
+        var inviteUrl = $"{baseUrl.TrimEnd('/')}/invite/{ev.InviteToken}?i={invitee.Id}";
         var title = WebUtility.HtmlEncode(ev.Title);
         var startsLocal = ev.StartsAt.ToLocalTime().ToString("dddd d. MMMM yyyy 'kl.' HH:mm", DanishCulture);
         var location = string.IsNullOrWhiteSpace(ev.Location) ? null : ev.Location;

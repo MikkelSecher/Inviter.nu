@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { Calendar, CalendarClock, CheckCircle2, Lock, MapPin } from 'lucide-react';
 import { api, ApiError } from '../api/client';
@@ -15,6 +15,8 @@ import { formatEventTime } from '../lib/format';
 
 export function InvitePage() {
   const { token = '' } = useParams();
+  const [searchParams] = useSearchParams();
+  const inviteeId = searchParams.get('i');
   const [event, setEvent] = useState<EventPublic | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [name, setName] = useState('');
@@ -46,6 +48,24 @@ export function InvitePage() {
       cancelled = true;
     };
   }, [token]);
+
+  useEffect(() => {
+    if (!token || !inviteeId) return;
+    let cancelled = false;
+    api
+      .getInviteePrefill(token, inviteeId)
+      .then((prefill) => {
+        if (cancelled) return;
+        setName((prev) => (prev === '' ? prefill.name ?? '' : prev));
+        setEmail((prev) => (prev === '' ? prefill.email : prev));
+      })
+      .catch(() => {
+        // Silently ignore — unknown invitee falls back to empty form.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token, inviteeId]);
 
   const closed = useMemo(
     () => (event?.rsvpDeadline ? new Date() > new Date(event.rsvpDeadline) : false),

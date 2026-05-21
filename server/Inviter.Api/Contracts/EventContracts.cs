@@ -91,6 +91,8 @@ public record InviteeDto(
     int SendCount,
     RsvpStatus? RsvpStatus);
 
+public record InviteePrefillDto(string? Name, string Email);
+
 public record AddInviteesRequest(IReadOnlyList<AddInviteeEntry> Entries);
 
 public record AddInviteeEntry(string Email, string? Name);
