@@ -1,6 +1,6 @@
-using System.Threading.Channels;
+﻿using System.Threading.Channels;
 
-namespace Inviter.Api.Email;
+namespace Inviter.Api.Infrastructure.Email;
 
 public class ChannelEmailQueue : IEmailQueue
 {

@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 using Inviter.Api.Data;
-using Inviter.Api.Email;
+using Inviter.Api.Infrastructure.Email;
 using Inviter.Api.Endpoints;
 using Microsoft.EntityFrameworkCore;
 

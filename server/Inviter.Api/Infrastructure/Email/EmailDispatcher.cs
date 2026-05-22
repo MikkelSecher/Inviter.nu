@@ -1,4 +1,4 @@
-namespace Inviter.Api.Email;
+﻿namespace Inviter.Api.Infrastructure.Email;
 
 public class EmailDispatcher : BackgroundService
 {
@@ -65,7 +65,7 @@ public class EmailDispatcher : BackgroundService
                     message.Kind,
                     message.ToAddress,
                     attempt + 1,
-                    isFinal ? " — giving up" : "");
+                    isFinal ? " â€” giving up" : "");
             }
         }
     }

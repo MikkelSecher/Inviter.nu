@@ -1,8 +1,8 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Net;
 using Inviter.Api.Domain;
 
-namespace Inviter.Api.Email.Templates;
+namespace Inviter.Api.Infrastructure.Email.Templates;
 
 public static class AdminLinkTemplate
 {
@@ -30,12 +30,12 @@ public static class AdminLinkTemplate
       <p style="margin: 0 0 16px; line-height: 1.5;">{greeting},</p>
       <p style="margin: 0 0 16px; line-height: 1.5;">"<strong>{title}</strong>" er nu klar. Du kan styre tilmeldinger, opdatere detaljer og se hvem der kommer via dit admin-link:</p>
       <p style="margin: 0 0 24px;">
-        <a href="{adminUrl}" style="display: inline-block; background: #6b1f2c; color: #fdf8f3; padding: 12px 20px; border-radius: 8px; text-decoration: none; font-weight: 500;">Åbn admin-side</a>
+        <a href="{adminUrl}" style="display: inline-block; background: #6b1f2c; color: #fdf8f3; padding: 12px 20px; border-radius: 8px; text-decoration: none; font-weight: 500;">Ã…bn admin-side</a>
       </p>
-      <p style="margin: 0 0 8px; line-height: 1.5;"><strong>Hvornår:</strong> {WebUtility.HtmlEncode(startsLocal)}</p>
-      <p style="margin: 0 0 24px; line-height: 1.5;"><strong>Invite-link til gæsterne:</strong><br><a href="{inviteUrl}" style="color: #6b1f2c;">{inviteUrl}</a></p>
+      <p style="margin: 0 0 8px; line-height: 1.5;"><strong>HvornÃ¥r:</strong> {WebUtility.HtmlEncode(startsLocal)}</p>
+      <p style="margin: 0 0 24px; line-height: 1.5;"><strong>Invite-link til gÃ¦sterne:</strong><br><a href="{inviteUrl}" style="color: #6b1f2c;">{inviteUrl}</a></p>
       <hr style="border: none; border-top: 1px solid #e8dccd; margin: 24px 0;">
-      <p style="margin: 0; font-size: 13px; color: #8a6e6e; line-height: 1.5;">Gem denne mail — admin-linket er dit eneste adgangspunkt og kan ikke gendannes hvis du mister det.</p>
+      <p style="margin: 0; font-size: 13px; color: #8a6e6e; line-height: 1.5;">Gem denne mail â€” admin-linket er dit eneste adgangspunkt og kan ikke gendannes hvis du mister det.</p>
     </td></tr>
   </table>
 </body>
@@ -47,12 +47,12 @@ public static class AdminLinkTemplate
 
 Dit event "{ev.Title}" er oprettet.
 
-Hvornår: {startsLocal}
+HvornÃ¥r: {startsLocal}
 
 Admin-link (gem denne mail!):
 {adminUrl}
 
-Invite-link til gæsterne:
+Invite-link til gÃ¦sterne:
 {inviteUrl}
 
 Admin-linket er dit eneste adgangspunkt og kan ikke gendannes hvis du mister det.

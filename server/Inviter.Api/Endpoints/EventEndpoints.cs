@@ -1,9 +1,10 @@
 using Inviter.Api.Contracts;
 using Inviter.Api.Data;
 using Inviter.Api.Domain;
-using Inviter.Api.Email;
-using Inviter.Api.Email.Templates;
-using Inviter.Api.Tokens;
+using Inviter.Api.Infrastructure.Email;
+using Inviter.Api.Infrastructure.Email.Templates;
+using Inviter.Api.Infrastructure.Tokens;
+using Inviter.Api.Shared;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -38,8 +39,8 @@ public static class EventEndpoints
             req.Title, req.StartsAt, req.RsvpDeadline, req.ContactRequirement, req.OrganizerEmail);
         if (errors is not null) return Results.ValidationProblem(errors);
 
-        var organizerEmail = NormalizeOrganizerEmail(req.OrganizerEmail);
-        var organizerName = NormalizeOptional(req.OrganizerName);
+        var organizerEmail = Validation.NormalizeOrganizerEmail(req.OrganizerEmail);
+        var organizerName = Validation.NormalizeOptional(req.OrganizerName);
 
         var ev = new Event
         {
@@ -134,7 +135,7 @@ public static class EventEndpoints
         {
             case ContactRequirement.Email:
                 var trimmedEmail = req.Email?.Trim();
-                if (string.IsNullOrEmpty(trimmedEmail) || !LooksLikeEmail(trimmedEmail))
+                if (string.IsNullOrEmpty(trimmedEmail) || !Validation.LooksLikeEmail(trimmedEmail))
                     return Results.ValidationProblem(new Dictionary<string, string[]>
                     {
                         ["email"] = new[] { "Email er påkrævet og skal være en gyldig email-adresse." }
@@ -219,8 +220,8 @@ public static class EventEndpoints
             ? DateTime.SpecifyKind(req.RsvpDeadline.Value, DateTimeKind.Utc)
             : null;
         ev.ContactRequirement = req.ContactRequirement;
-        ev.OrganizerEmail = NormalizeOrganizerEmail(req.OrganizerEmail);
-        ev.OrganizerName = NormalizeOptional(req.OrganizerName);
+        ev.OrganizerEmail = Validation.NormalizeOrganizerEmail(req.OrganizerEmail);
+        ev.OrganizerName = Validation.NormalizeOptional(req.OrganizerName);
         await db.SaveChangesAsync();
 
         return Results.NoContent();
@@ -297,7 +298,7 @@ public static class EventEndpoints
         {
             var email = entry.Email?.Trim();
             var name = string.IsNullOrWhiteSpace(entry.Name) ? null : entry.Name.Trim();
-            if (string.IsNullOrEmpty(email) || email.Length > 320 || !LooksLikeEmail(email))
+            if (string.IsNullOrEmpty(email) || email.Length > 320 || !Validation.LooksLikeEmail(email))
             {
                 skippedInvalid.Add(entry.Email ?? "");
                 continue;
@@ -397,28 +398,9 @@ public static class EventEndpoints
             errors["contactRequirement"] = new[] { "Ugyldigt kontaktkrav." };
 
         var trimmedOrganizerEmail = organizerEmail?.Trim();
-        if (!string.IsNullOrEmpty(trimmedOrganizerEmail) && !LooksLikeEmail(trimmedOrganizerEmail))
+        if (!string.IsNullOrEmpty(trimmedOrganizerEmail) && !Validation.LooksLikeEmail(trimmedOrganizerEmail))
             errors["organizerEmail"] = new[] { "Din email skal være en gyldig email-adresse." };
 
         return errors.Count == 0 ? null : errors;
-    }
-
-    private static string? NormalizeOrganizerEmail(string? value)
-    {
-        var trimmed = value?.Trim();
-        return string.IsNullOrEmpty(trimmed) ? null : trimmed;
-    }
-
-    private static string? NormalizeOptional(string? value)
-    {
-        var trimmed = value?.Trim();
-        return string.IsNullOrEmpty(trimmed) ? null : trimmed;
-    }
-
-    private static bool LooksLikeEmail(string s)
-    {
-        if (s.Contains(' ')) return false;
-        var at = s.IndexOf('@');
-        return at > 0 && at < s.Length - 3 && s.IndexOf('.', at) > at + 1;
     }
 }

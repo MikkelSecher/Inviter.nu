@@ -1,5 +1,5 @@
 using System.Threading.Channels;
-using Inviter.Api.Email;
+using Inviter.Api.Infrastructure.Email;
 
 namespace Inviter.Api.Tests;
 

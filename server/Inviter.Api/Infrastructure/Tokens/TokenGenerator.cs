@@ -1,6 +1,6 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 
-namespace Inviter.Api.Tokens;
+namespace Inviter.Api.Infrastructure.Tokens;
 
 public static class TokenGenerator
 {
