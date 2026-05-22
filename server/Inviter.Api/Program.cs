@@ -48,3 +48,5 @@ using (var scope = app.Services.CreateScope())
 app.MapEventEndpoints();
 
 app.Run();
+
+public partial class Program;
