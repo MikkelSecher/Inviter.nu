@@ -24,11 +24,20 @@ Each `Event` carries three configuration flags that `SubmitRsvp` enforces at val
 Validation lives in the shared `ValidateEventOptions` helper in `EventEndpoints.cs` (called from both CreateEvent and UpdateByAdminToken). All three enums (`RsvpStatus`, `ContactRequirement`) wire-serialize as strings via the global `JsonStringEnumConverter` registered in `Program.cs`.
 
 ### Backend layout (`server/Inviter.Api`)
-- `Domain/` — POCOs (`Event`, `Rsvp`, `RsvpStatus`).
-- `Data/AppDbContext.cs` — Fluent config: max-lengths, unique indexes on tokens, `RsvpStatus` stored as `int`, cascade delete from Event to Rsvps.
-- `Endpoints/EventEndpoints.cs` — All routes registered as Minimal API handlers under `/api`. Validation is inline via `Results.ValidationProblem`; `DateTime` values are explicitly `SpecifyKind(..., Utc)` to avoid SQLite kind drift.
-- `Tokens/TokenGenerator.cs` — `RandomNumberGenerator` + base64url. Don't replace with GUIDs — invite tokens need to be short enough to share.
-- `Program.cs` — Configures SQLite, JSON (camelCase + `JsonStringEnumConverter` so the wire format is `"Yes"`/`"No"`/`"Maybe"`, not numbers), CORS for `http://localhost:5173` (Development only), then calls `db.Database.Migrate()` at startup so migrations are applied automatically.
+Vertical-slice structure: each endpoint is its own static class in `Features/<Area>/<UseCase>.cs` with a single `Handle` method. Cross-cutting code lives in `Domain/`, `Data/`, `Infrastructure/`, and `Shared/`.
+
+- `Features/Events/` — `CreateEvent`, `GetEventPublic`, `GetEventAdmin`, `UpdateEvent` slices, plus the shared `EventValidation` helper used by Create+Update, and `EventEndpoints.MapEventEndpoints` that wires the four routes. Request/response records (`CreateEventRequest`, `EventAdminDto`, etc.) live in `EventDtos.cs` alongside the slices that use them.
+- `Features/Rsvps/` — `SubmitRsvp` (with private contact-requirement helper) and `DeleteRsvp` slices, plus `RsvpEndpoints.MapRsvpEndpoints`. DTOs in `RsvpDtos.cs`. `RsvpDto` is referenced cross-slice from `Events.GetEventAdmin` (admin view inlines the RSVPs).
+- `Features/Invitees/` — `GetInviteePrefill`, `ListInvitees`, `AddInvitees` (holds the `MaxInviteesPerBulkAdd = 200` constant), `DeleteInvitee`, `SendInvitations` slices, plus `InviteeEndpoints.MapInviteeEndpoints`. DTOs in `InviteeDtos.cs`.
+- `Domain/` — POCOs (`Event`, `Rsvp`, `Invitee`) and enums (`RsvpStatus`, `ContactRequirement`). Anæmiske med vilje: ingen rig domænelogik i denne app.
+- `Data/AppDbContext.cs` — Fluent config: max-lengths, unique indexes on tokens, `RsvpStatus`/`ContactRequirement` stored as `int`, cascade delete from `Event` to `Rsvps`/`Invitees`. Handlers tale direkte med `AppDbContext` — ingen repository-abstraktion (bevidst vertical-slice valg).
+- `Infrastructure/Email/` — `IEmailQueue` + `ChannelEmailQueue` (singleton) + `EmailDispatcher` (hosted service med 3-trins retry-backoff) + `MailKitEmailSender`. Templates (`AdminLinkTemplate`, `RsvpConfirmationTemplate`, `RsvpNotificationTemplate`, `InvitationTemplate`) er statiske builders, kaldes direkte fra slice-handlers.
+- `Infrastructure/Tokens/TokenGenerator.cs` — `RandomNumberGenerator` + base64url. Don't replace with GUIDs — invite tokens need to be short enough to share.
+- `Shared/Validation.cs` — `LooksLikeEmail`, `NormalizeOptional`, `NormalizeOrganizerEmail`. Bruges på tværs af slices.
+- `Program.cs` — Configures SQLite, JSON (camelCase + `JsonStringEnumConverter` so the wire format is `"Yes"`/`"No"`/`"Maybe"`, not numbers), CORS for `http://localhost:5173` (Development only), then calls `db.Database.Migrate()` at startup so migrations are applied automatically. Endpoint-wiring sker via tre `Map…Endpoints()`-kald, ét pr. feature.
+
+#### Tests (`server/Inviter.Api.Tests`)
+xUnit + `WebApplicationFactory<Program>` (`InviterApiFactory`) der: (1) overskriver `AppDbContext` til en held SQLite-`:memory:`-connection pr. fixture, (2) erstatter `IEmailQueue` med `FakeEmailQueue` der opsamler `QueuedEmail`-instanser uden at drive `EmailDispatcher`. Karakteriserings-tests pr. slice asserter status-koder, response-shape, validation-fejlbeskeder og email-side-effects. Kør med `dotnet test server/Inviter.Api.Tests/Inviter.Api.Tests.csproj`. Tilføj nye tests sammen med nye slices — én test-fil pr. feature (`EventsTests.cs`, `RsvpsTests.cs`, `InviteesTests.cs`).
 
 ### Frontend layout (`client/src`)
 - `api/` — `client.ts` is a thin typed fetch wrapper; throws `ApiError` with status. `types.ts` mirrors the backend DTOs — keep them in sync by hand.

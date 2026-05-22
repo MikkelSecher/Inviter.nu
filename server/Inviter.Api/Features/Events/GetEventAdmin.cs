@@ -1,5 +1,5 @@
-using Inviter.Api.Contracts;
-using Inviter.Api.Data;
+﻿using Inviter.Api.Data;
+using Inviter.Api.Features.Rsvps;
 using Microsoft.EntityFrameworkCore;
 
 namespace Inviter.Api.Features.Events;

@@ -2,8 +2,9 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
-using Inviter.Api.Contracts;
 using Inviter.Api.Domain;
+using Inviter.Api.Features.Events;
+using Inviter.Api.Features.Rsvps;
 
 namespace Inviter.Api.Tests;
 

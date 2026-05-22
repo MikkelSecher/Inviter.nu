@@ -1,5 +1,4 @@
-using Inviter.Api.Contracts;
-using Inviter.Api.Data;
+﻿using Inviter.Api.Data;
 using Inviter.Api.Domain;
 using Microsoft.EntityFrameworkCore;
 

@@ -1,5 +1,4 @@
-using Inviter.Api.Contracts;
-using Inviter.Api.Data;
+﻿using Inviter.Api.Data;
 using Inviter.Api.Infrastructure.Email;
 using Inviter.Api.Infrastructure.Email.Templates;
 using Microsoft.EntityFrameworkCore;

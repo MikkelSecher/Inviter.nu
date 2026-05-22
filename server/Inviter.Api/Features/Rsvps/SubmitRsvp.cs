@@ -1,4 +1,3 @@
-using Inviter.Api.Contracts;
 using Inviter.Api.Data;
 using Inviter.Api.Domain;
 using Inviter.Api.Infrastructure.Email;

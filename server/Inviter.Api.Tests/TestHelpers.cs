@@ -1,7 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
-using Inviter.Api.Contracts;
 using Inviter.Api.Domain;
+using Inviter.Api.Features.Events;
 
 namespace Inviter.Api.Tests;
 
