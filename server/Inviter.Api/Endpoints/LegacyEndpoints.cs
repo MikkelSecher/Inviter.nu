@@ -3,88 +3,25 @@ using Inviter.Api.Data;
 using Inviter.Api.Domain;
 using Inviter.Api.Infrastructure.Email;
 using Inviter.Api.Infrastructure.Email.Templates;
-using Inviter.Api.Infrastructure.Tokens;
 using Inviter.Api.Shared;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace Inviter.Api.Endpoints;
 
-public static class EventEndpoints
+public static class LegacyEndpoints
 {
-    public static void MapEventEndpoints(this IEndpointRouteBuilder routes)
+    public static void MapLegacyEndpoints(this IEndpointRouteBuilder routes)
     {
         var api = routes.MapGroup("/api");
 
-        api.MapPost("/events", CreateEvent);
-        api.MapGet("/invite/{inviteToken}", GetByInviteToken);
         api.MapGet("/invite/{inviteToken}/invitee/{inviteeId:guid}", GetInviteePrefill);
         api.MapPost("/invite/{inviteToken}/rsvp", SubmitRsvp);
-        api.MapGet("/manage/{adminToken}", GetByAdminToken);
-        api.MapPut("/manage/{adminToken}", UpdateByAdminToken);
         api.MapDelete("/manage/{adminToken}/rsvp/{rsvpId:guid}", DeleteRsvp);
         api.MapGet("/manage/{adminToken}/invitees", ListInvitees);
         api.MapPost("/manage/{adminToken}/invitees", AddInvitees);
         api.MapDelete("/manage/{adminToken}/invitees/{inviteeId:guid}", DeleteInvitee);
         api.MapPost("/manage/{adminToken}/invitees/send", SendInvitations);
-    }
-
-    private static async Task<IResult> CreateEvent(
-        CreateEventRequest req,
-        AppDbContext db,
-        IEmailQueue emailQueue,
-        IOptions<AppOptions> appOptions)
-    {
-        var errors = ValidateEventOptions(
-            req.Title, req.StartsAt, req.RsvpDeadline, req.ContactRequirement, req.OrganizerEmail);
-        if (errors is not null) return Results.ValidationProblem(errors);
-
-        var organizerEmail = Validation.NormalizeOrganizerEmail(req.OrganizerEmail);
-        var organizerName = Validation.NormalizeOptional(req.OrganizerName);
-
-        var ev = new Event
-        {
-            Id = Guid.NewGuid(),
-            Title = req.Title.Trim(),
-            Description = (req.Description ?? "").Trim(),
-            Location = (req.Location ?? "").Trim(),
-            StartsAt = DateTime.SpecifyKind(req.StartsAt, DateTimeKind.Utc),
-            InviteToken = TokenGenerator.NewInviteToken(),
-            AdminToken = TokenGenerator.NewAdminToken(),
-            CreatedAt = DateTime.UtcNow,
-            AllowMaybe = req.AllowMaybe,
-            RsvpDeadline = req.RsvpDeadline.HasValue
-                ? DateTime.SpecifyKind(req.RsvpDeadline.Value, DateTimeKind.Utc)
-                : null,
-            ContactRequirement = req.ContactRequirement,
-            OrganizerEmail = organizerEmail,
-            OrganizerName = organizerName
-        };
-
-        db.Events.Add(ev);
-        await db.SaveChangesAsync();
-
-        if (!string.IsNullOrEmpty(ev.OrganizerEmail))
-        {
-            emailQueue.Enqueue(AdminLinkTemplate.Build(ev, appOptions.Value.BaseUrl));
-        }
-
-        return Results.Created($"/api/manage/{ev.AdminToken}", new EventCreatedDto(
-            ev.Id, ev.Title, ev.Description, ev.Location, ev.StartsAt,
-            ev.InviteToken, ev.AdminToken, ev.CreatedAt,
-            ev.AllowMaybe, ev.RsvpDeadline, ev.ContactRequirement,
-            ev.OrganizerEmail, ev.OrganizerName));
-    }
-
-    private static async Task<IResult> GetByInviteToken(string inviteToken, AppDbContext db)
-    {
-        var ev = await db.Events.AsNoTracking()
-            .FirstOrDefaultAsync(x => x.InviteToken == inviteToken);
-        if (ev is null) return Results.NotFound();
-
-        return Results.Ok(new EventPublicDto(
-            ev.Id, ev.Title, ev.Description, ev.Location, ev.StartsAt, ev.InviteToken,
-            ev.AllowMaybe, ev.RsvpDeadline, ev.ContactRequirement));
     }
 
     private static async Task<IResult> GetInviteePrefill(string inviteToken, Guid inviteeId, AppDbContext db)
@@ -180,51 +117,6 @@ public static class EventEndpoints
         return Results.Ok(new RsvpDto(
             rsvp.Id, rsvp.GuestName, rsvp.Status, rsvp.Comment,
             rsvp.Email, rsvp.Phone, rsvp.SubmittedAt));
-    }
-
-    private static async Task<IResult> GetByAdminToken(string adminToken, AppDbContext db)
-    {
-        var ev = await db.Events.AsNoTracking()
-            .Include(x => x.Rsvps)
-            .FirstOrDefaultAsync(x => x.AdminToken == adminToken);
-        if (ev is null) return Results.NotFound();
-
-        var rsvps = ev.Rsvps
-            .OrderBy(r => r.SubmittedAt)
-            .Select(r => new RsvpDto(r.Id, r.GuestName, r.Status, r.Comment, r.Email, r.Phone, r.SubmittedAt))
-            .ToList();
-
-        return Results.Ok(new EventAdminDto(
-            ev.Id, ev.Title, ev.Description, ev.Location, ev.StartsAt,
-            ev.InviteToken, ev.AdminToken, ev.CreatedAt,
-            ev.AllowMaybe, ev.RsvpDeadline, ev.ContactRequirement,
-            ev.OrganizerEmail, ev.OrganizerName,
-            rsvps));
-    }
-
-    private static async Task<IResult> UpdateByAdminToken(string adminToken, UpdateEventRequest req, AppDbContext db)
-    {
-        var errors = ValidateEventOptions(
-            req.Title, req.StartsAt, req.RsvpDeadline, req.ContactRequirement, req.OrganizerEmail);
-        if (errors is not null) return Results.ValidationProblem(errors);
-
-        var ev = await db.Events.FirstOrDefaultAsync(x => x.AdminToken == adminToken);
-        if (ev is null) return Results.NotFound();
-
-        ev.Title = req.Title.Trim();
-        ev.Description = (req.Description ?? "").Trim();
-        ev.Location = (req.Location ?? "").Trim();
-        ev.StartsAt = DateTime.SpecifyKind(req.StartsAt, DateTimeKind.Utc);
-        ev.AllowMaybe = req.AllowMaybe;
-        ev.RsvpDeadline = req.RsvpDeadline.HasValue
-            ? DateTime.SpecifyKind(req.RsvpDeadline.Value, DateTimeKind.Utc)
-            : null;
-        ev.ContactRequirement = req.ContactRequirement;
-        ev.OrganizerEmail = Validation.NormalizeOrganizerEmail(req.OrganizerEmail);
-        ev.OrganizerName = Validation.NormalizeOptional(req.OrganizerName);
-        await db.SaveChangesAsync();
-
-        return Results.NoContent();
     }
 
     private static async Task<IResult> DeleteRsvp(string adminToken, Guid rsvpId, AppDbContext db)
@@ -380,27 +272,5 @@ public static class EventEndpoints
         await db.SaveChangesAsync();
 
         return Results.Ok(new SendInvitationsResponse(invitees.Count));
-    }
-
-    private static Dictionary<string, string[]>? ValidateEventOptions(
-        string title, DateTime startsAt, DateTime? rsvpDeadline, ContactRequirement contactRequirement,
-        string? organizerEmail)
-    {
-        var errors = new Dictionary<string, string[]>();
-
-        if (string.IsNullOrWhiteSpace(title))
-            errors["title"] = new[] { "Titel er påkrævet." };
-
-        if (rsvpDeadline.HasValue && rsvpDeadline.Value > startsAt)
-            errors["rsvpDeadline"] = new[] { "SU-deadline kan ikke ligge efter eventet." };
-
-        if (!Enum.IsDefined(typeof(ContactRequirement), contactRequirement))
-            errors["contactRequirement"] = new[] { "Ugyldigt kontaktkrav." };
-
-        var trimmedOrganizerEmail = organizerEmail?.Trim();
-        if (!string.IsNullOrEmpty(trimmedOrganizerEmail) && !Validation.LooksLikeEmail(trimmedOrganizerEmail))
-            errors["organizerEmail"] = new[] { "Din email skal være en gyldig email-adresse." };
-
-        return errors.Count == 0 ? null : errors;
     }
 }

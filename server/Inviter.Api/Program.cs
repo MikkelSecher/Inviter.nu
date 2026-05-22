@@ -1,7 +1,8 @@
 using System.Text.Json.Serialization;
 using Inviter.Api.Data;
-using Inviter.Api.Infrastructure.Email;
 using Inviter.Api.Endpoints;
+using Inviter.Api.Features.Events;
+using Inviter.Api.Infrastructure.Email;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -46,6 +47,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.MapEventEndpoints();
+app.MapLegacyEndpoints();
 
 app.Run();
 
