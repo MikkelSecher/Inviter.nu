@@ -16,8 +16,6 @@ public static class LegacyEndpoints
         var api = routes.MapGroup("/api");
 
         api.MapGet("/invite/{inviteToken}/invitee/{inviteeId:guid}", GetInviteePrefill);
-        api.MapPost("/invite/{inviteToken}/rsvp", SubmitRsvp);
-        api.MapDelete("/manage/{adminToken}/rsvp/{rsvpId:guid}", DeleteRsvp);
         api.MapGet("/manage/{adminToken}/invitees", ListInvitees);
         api.MapPost("/manage/{adminToken}/invitees", AddInvitees);
         api.MapDelete("/manage/{adminToken}/invitees/{inviteeId:guid}", DeleteInvitee);
@@ -31,105 +29,6 @@ public static class LegacyEndpoints
             .Select(i => new InviteePrefillDto(i.Name, i.Email))
             .FirstOrDefaultAsync();
         return prefill is null ? Results.NotFound() : Results.Ok(prefill);
-    }
-
-    private static async Task<IResult> SubmitRsvp(
-        string inviteToken,
-        CreateRsvpRequest req,
-        AppDbContext db,
-        IEmailQueue emailQueue,
-        IOptions<AppOptions> appOptions)
-    {
-        if (string.IsNullOrWhiteSpace(req.GuestName))
-            return Results.ValidationProblem(new Dictionary<string, string[]>
-            {
-                ["guestName"] = new[] { "Navn er påkrævet." }
-            });
-        if (!Enum.IsDefined(typeof(RsvpStatus), req.Status))
-            return Results.ValidationProblem(new Dictionary<string, string[]>
-            {
-                ["status"] = new[] { "Ugyldig status." }
-            });
-
-        var ev = await db.Events.FirstOrDefaultAsync(x => x.InviteToken == inviteToken);
-        if (ev is null) return Results.NotFound();
-
-        if (ev.RsvpDeadline.HasValue && DateTime.UtcNow > ev.RsvpDeadline.Value)
-            return Results.ValidationProblem(new Dictionary<string, string[]>
-            {
-                ["rsvp"] = new[] { "Tilmeldingen er lukket." }
-            });
-
-        if (req.Status == RsvpStatus.Maybe && !ev.AllowMaybe)
-            return Results.ValidationProblem(new Dictionary<string, string[]>
-            {
-                ["status"] = new[] { "'Måske' er ikke tilladt for dette event." }
-            });
-
-        string? email = null;
-        string? phone = null;
-        switch (ev.ContactRequirement)
-        {
-            case ContactRequirement.Email:
-                var trimmedEmail = req.Email?.Trim();
-                if (string.IsNullOrEmpty(trimmedEmail) || !Validation.LooksLikeEmail(trimmedEmail))
-                    return Results.ValidationProblem(new Dictionary<string, string[]>
-                    {
-                        ["email"] = new[] { "Email er påkrævet og skal være en gyldig email-adresse." }
-                    });
-                email = trimmedEmail;
-                break;
-            case ContactRequirement.Phone:
-                var trimmedPhone = req.Phone?.Trim();
-                if (string.IsNullOrEmpty(trimmedPhone) || trimmedPhone.Length < 5)
-                    return Results.ValidationProblem(new Dictionary<string, string[]>
-                    {
-                        ["phone"] = new[] { "Telefonnummer er påkrævet (mindst 5 tegn)." }
-                    });
-                phone = trimmedPhone;
-                break;
-        }
-
-        var rsvp = new Rsvp
-        {
-            Id = Guid.NewGuid(),
-            EventId = ev.Id,
-            GuestName = req.GuestName.Trim(),
-            Status = req.Status,
-            Comment = string.IsNullOrWhiteSpace(req.Comment) ? null : req.Comment.Trim(),
-            Email = email,
-            Phone = phone,
-            SubmittedAt = DateTime.UtcNow
-        };
-        db.Rsvps.Add(rsvp);
-        await db.SaveChangesAsync();
-
-        var baseUrl = appOptions.Value.BaseUrl;
-        if (!string.IsNullOrEmpty(rsvp.Email))
-        {
-            emailQueue.Enqueue(RsvpConfirmationTemplate.Build(ev, rsvp, baseUrl));
-        }
-        if (!string.IsNullOrEmpty(ev.OrganizerEmail))
-        {
-            emailQueue.Enqueue(RsvpNotificationTemplate.Build(ev, rsvp, baseUrl));
-        }
-
-        return Results.Ok(new RsvpDto(
-            rsvp.Id, rsvp.GuestName, rsvp.Status, rsvp.Comment,
-            rsvp.Email, rsvp.Phone, rsvp.SubmittedAt));
-    }
-
-    private static async Task<IResult> DeleteRsvp(string adminToken, Guid rsvpId, AppDbContext db)
-    {
-        var ev = await db.Events.FirstOrDefaultAsync(x => x.AdminToken == adminToken);
-        if (ev is null) return Results.NotFound();
-
-        var rsvp = await db.Rsvps.FirstOrDefaultAsync(r => r.Id == rsvpId && r.EventId == ev.Id);
-        if (rsvp is null) return Results.NotFound();
-
-        db.Rsvps.Remove(rsvp);
-        await db.SaveChangesAsync();
-        return Results.NoContent();
     }
 
     private const int MaxInviteesPerBulkAdd = 200;

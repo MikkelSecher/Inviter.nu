@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using Inviter.Api.Data;
 using Inviter.Api.Endpoints;
 using Inviter.Api.Features.Events;
+using Inviter.Api.Features.Rsvps;
 using Inviter.Api.Infrastructure.Email;
 using Microsoft.EntityFrameworkCore;
 
@@ -47,6 +48,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.MapEventEndpoints();
+app.MapRsvpEndpoints();
 app.MapLegacyEndpoints();
 
 app.Run();
