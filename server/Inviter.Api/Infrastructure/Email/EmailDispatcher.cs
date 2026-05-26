@@ -1,5 +1,6 @@
 ﻿using Inviter.Api.Data;
 using Inviter.Api.Domain;
+using Inviter.Api.Infrastructure.Metrics;
 
 namespace Inviter.Api.Infrastructure.Email;
 
@@ -61,6 +62,9 @@ public class EmailDispatcher : BackgroundService
                     Kind = message.Kind,
                 });
                 await db.SaveChangesAsync(ct);
+
+                var metrics = _services.GetService<AppMetrics>();
+                metrics?.EmailsSent.Add(1, new KeyValuePair<string, object?>("kind", message.Kind));
                 return;
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)

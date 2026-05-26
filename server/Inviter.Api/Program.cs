@@ -5,7 +5,9 @@ using Inviter.Api.Features.Events;
 using Inviter.Api.Features.Invitees;
 using Inviter.Api.Features.Rsvps;
 using Inviter.Api.Infrastructure.Email;
+using Inviter.Api.Infrastructure.Metrics;
 using Microsoft.EntityFrameworkCore;
+using OpenTelemetry.Metrics;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,6 +36,13 @@ builder.Services.AddScoped<IEmailSender, MailKitEmailSender>();
 builder.Services.AddSingleton<IEmailQueue, ChannelEmailQueue>();
 builder.Services.AddHostedService<EmailDispatcher>();
 
+builder.Services.AddSingleton<AppMetrics>();
+builder.Services.AddOpenTelemetry()
+    .WithMetrics(m => m
+        .AddMeter(AppMetrics.MeterName)
+        .AddAspNetCoreInstrumentation()
+        .AddPrometheusExporter());
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -52,6 +61,8 @@ app.MapEventEndpoints();
 app.MapRsvpEndpoints();
 app.MapInviteeEndpoints();
 app.MapAdminEndpoints();
+app.MapPrometheusScrapingEndpoint();
+app.Services.GetRequiredService<AppMetrics>();
 
 app.Run();
 
