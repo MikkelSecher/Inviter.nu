@@ -1,4 +1,7 @@
-﻿namespace Inviter.Api.Infrastructure.Email;
+﻿using Inviter.Api.Data;
+using Inviter.Api.Domain;
+
+namespace Inviter.Api.Infrastructure.Email;
 
 public class EmailDispatcher : BackgroundService
 {
@@ -32,6 +35,7 @@ public class EmailDispatcher : BackgroundService
     {
         using var scope = _services.CreateScope();
         var sender = scope.ServiceProvider.GetRequiredService<IEmailSender>();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         for (var attempt = 0; attempt < RetryBackoff.Length; attempt++)
         {
@@ -49,6 +53,14 @@ public class EmailDispatcher : BackgroundService
                 {
                     _log.LogInformation("Email {Kind} to {To} sent on attempt {Attempt}", message.Kind, message.ToAddress, attempt + 1);
                 }
+
+                db.EmailLogs.Add(new EmailLog
+                {
+                    Id = Guid.NewGuid(),
+                    SentAt = DateTime.UtcNow,
+                    Kind = message.Kind,
+                });
+                await db.SaveChangesAsync(ct);
                 return;
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
