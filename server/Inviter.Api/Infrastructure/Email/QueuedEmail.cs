@@ -6,4 +6,5 @@ public record QueuedEmail(
     string Subject,
     string HtmlBody,
     string TextBody,
-    string Kind);
+    string Kind,
+    IReadOnlyList<InlineAttachment>? InlineAttachments = null);

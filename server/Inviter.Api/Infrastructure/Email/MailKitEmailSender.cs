@@ -35,6 +35,19 @@ public class MailKitEmailSender : IEmailSender
             TextBody = message.TextBody,
             HtmlBody = message.HtmlBody,
         };
+
+        if (message.InlineAttachments is { Count: > 0 })
+        {
+            foreach (var attachment in message.InlineAttachments)
+            {
+                var resource = body.LinkedResources.Add(
+                    attachment.ContentId,
+                    attachment.Content,
+                    ContentType.Parse(attachment.MediaType));
+                resource.ContentId = attachment.ContentId;
+            }
+        }
+
         mime.Body = body.ToMessageBody();
 
         using var client = new SmtpClient();
