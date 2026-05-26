@@ -48,6 +48,13 @@ export function MetricsPage() {
   }, [load]);
 
   if (notFound) return <NotFoundPage />;
+  if (loading && snapshot === null) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <Skeleton className="h-9 w-32" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

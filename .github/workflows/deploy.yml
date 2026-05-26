@@ -24,11 +24,12 @@ jobs:
           MAIL_FROM: ${{ secrets.MAIL_FROM }}
           MAIL_FROM_NAME: ${{ secrets.MAIL_FROM_NAME }}
           APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+          APP_DASHBOARD_SLUG: ${{ secrets.APP_DASHBOARD_SLUG }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          envs: SITE_ADDRESS,SMTP_HOST,SMTP_PORT,SMTP_USER,SMTP_PASSWORD,MAIL_FROM,MAIL_FROM_NAME,APP_BASE_URL
+          envs: SITE_ADDRESS,SMTP_HOST,SMTP_PORT,SMTP_USER,SMTP_PASSWORD,MAIL_FROM,MAIL_FROM_NAME,APP_BASE_URL,APP_DASHBOARD_SLUG
           script: |
             set -e
             cd /opt/Inviter.nu
@@ -43,6 +44,7 @@ jobs:
             MAIL_FROM=${MAIL_FROM}
             MAIL_FROM_NAME=${MAIL_FROM_NAME}
             APP_BASE_URL=${APP_BASE_URL}
+            APP_DASHBOARD_SLUG=${APP_DASHBOARD_SLUG}
             EOF
             chmod 600 .env
             docker compose -f docker-compose.yml up -d --build
