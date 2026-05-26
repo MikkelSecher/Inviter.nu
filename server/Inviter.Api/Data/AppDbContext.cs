@@ -10,6 +10,7 @@ public class AppDbContext : DbContext
     public DbSet<Event> Events => Set<Event>();
     public DbSet<Rsvp> Rsvps => Set<Rsvp>();
     public DbSet<Invitee> Invitees => Set<Invitee>();
+    public DbSet<EmailLog> EmailLogs => Set<EmailLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -51,6 +52,12 @@ public class AppDbContext : DbContext
             i.Property(x => x.Email).IsRequired().HasMaxLength(320);
             i.Property(x => x.Name).HasMaxLength(200);
             i.HasIndex(x => new { x.EventId, x.Email }).IsUnique();
+        });
+
+        modelBuilder.Entity<EmailLog>(l =>
+        {
+            l.Property(x => x.Kind).IsRequired().HasMaxLength(64);
+            l.HasIndex(x => x.SentAt);
         });
     }
 }
