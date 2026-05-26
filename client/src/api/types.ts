@@ -77,6 +77,11 @@ export interface CreateRsvpInput {
   phone: string | null;
 }
 
+export interface InviteePrefill {
+  name: string | null;
+  email: string;
+}
+
 export interface Invitee {
   id: string;
   email: string;

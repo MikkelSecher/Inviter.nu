@@ -1,4 +1,4 @@
-namespace Inviter.Api.Email;
+﻿namespace Inviter.Api.Infrastructure.Email;
 
 public record QueuedEmail(
     string ToAddress,

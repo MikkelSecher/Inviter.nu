@@ -1,8 +1,8 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Net;
 using Inviter.Api.Domain;
 
-namespace Inviter.Api.Email.Templates;
+namespace Inviter.Api.Infrastructure.Email.Templates;
 
 public static class RsvpNotificationTemplate
 {
@@ -21,7 +21,7 @@ public static class RsvpNotificationTemplate
         {
             RsvpStatus.Yes => "Kommer",
             RsvpStatus.No => "Kommer ikke",
-            RsvpStatus.Maybe => "Måske",
+            RsvpStatus.Maybe => "MÃ¥ske",
             _ => "Svar modtaget"
         };
         var statusColor = rsvp.Status switch
@@ -32,7 +32,7 @@ public static class RsvpNotificationTemplate
             _ => "#6b1f2c"
         };
 
-        var subject = $"{rsvp.GuestName} svarede på \"{ev.Title}\": {statusLabel}";
+        var subject = $"{rsvp.GuestName} svarede pÃ¥ \"{ev.Title}\": {statusLabel}";
 
         var commentBlock = string.IsNullOrWhiteSpace(rsvp.Comment)
             ? ""
@@ -54,7 +54,7 @@ public static class RsvpNotificationTemplate
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #2a1a1a; background: #fdf8f3; margin: 0; padding: 24px;">
   <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width: 560px; margin: 0 auto; background: #fffdf9; border-radius: 12px; padding: 32px;">
     <tr><td>
-      <h1 style="font-family: Georgia, 'Times New Roman', serif; font-size: 22px; margin: 0 0 16px;">Nyt svar på "{title}"</h1>
+      <h1 style="font-family: Georgia, 'Times New Roman', serif; font-size: 22px; margin: 0 0 16px;">Nyt svar pÃ¥ "{title}"</h1>
       <p style="margin: 0 0 16px; line-height: 1.5;">{greeting},</p>
       <p style="margin: 0 0 8px; line-height: 1.5;"><strong>{guestName}</strong> har svaret: <span style="display: inline-block; padding: 2px 10px; background: {statusColor}; color: #fdf8f3; border-radius: 999px; font-size: 13px; font-weight: 500;">{statusLabel}</span></p>
       <p style="margin: 0 0 8px; line-height: 1.5;"><strong>Tidspunkt:</strong> {WebUtility.HtmlEncode(submittedLocal)}</p>
@@ -80,7 +80,7 @@ public static class RsvpNotificationTemplate
         var text = $"""
 {(string.IsNullOrWhiteSpace(ev.OrganizerName) ? "Hej" : $"Hej {ev.OrganizerName}")},
 
-{rsvp.GuestName} har svaret på "{ev.Title}": {statusLabel}.
+{rsvp.GuestName} har svaret pÃ¥ "{ev.Title}": {statusLabel}.
 Tidspunkt: {submittedLocal}
 {textContact}{textComment}
 Se alle svar:

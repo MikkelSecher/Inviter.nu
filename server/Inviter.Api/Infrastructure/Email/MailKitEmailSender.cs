@@ -1,9 +1,9 @@
-using MailKit.Net.Smtp;
+﻿using MailKit.Net.Smtp;
 using MailKit.Security;
 using Microsoft.Extensions.Options;
 using MimeKit;
 
-namespace Inviter.Api.Email;
+namespace Inviter.Api.Infrastructure.Email;
 
 public class MailKitEmailSender : IEmailSender
 {
@@ -21,7 +21,7 @@ public class MailKitEmailSender : IEmailSender
         var opt = _options.CurrentValue;
         if (!opt.IsConfigured)
         {
-            _log.LogWarning("SMTP not configured (Email:SmtpHost is empty) — dropping {Kind} to {To}", message.Kind, message.ToAddress);
+            _log.LogWarning("SMTP not configured (Email:SmtpHost is empty) â€” dropping {Kind} to {To}", message.Kind, message.ToAddress);
             return;
         }
 
