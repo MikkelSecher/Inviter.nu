@@ -21,3 +21,6 @@ dist/
 # OS
 Thumbs.db
 .DS_Store
+
+# Env
+.env
