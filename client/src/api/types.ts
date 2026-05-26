@@ -111,3 +111,14 @@ export interface SendInvitationsInput {
 export interface SendInvitationsResponse {
   enqueued: number;
 }
+
+export type MetricsPeriod = '7d' | '30d' | '90d' | 'all';
+
+export interface MetricsSnapshot {
+  events: number;
+  rsvps: number;
+  invitees: number;
+  emails: number;
+  period: MetricsPeriod;
+  upcomingOnly: boolean;
+}

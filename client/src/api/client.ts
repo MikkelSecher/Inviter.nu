@@ -8,6 +8,8 @@ import type {
   EventPublic,
   Invitee,
   InviteePrefill,
+  MetricsPeriod,
+  MetricsSnapshot,
   Rsvp,
   SendInvitationsInput,
   SendInvitationsResponse,
@@ -99,4 +101,11 @@ export const api = {
       `/api/manage/${encodeURIComponent(adminToken)}/invitees/send`,
       { method: 'POST', body: JSON.stringify(input) },
     ),
+
+  getMetrics: (slug: string, period: MetricsPeriod, upcomingOnly: boolean) => {
+    const params = new URLSearchParams({ period, upcomingOnly: String(upcomingOnly) });
+    return request<MetricsSnapshot>(
+      `/api/admin/${encodeURIComponent(slug)}/metrics?${params.toString()}`,
+    );
+  },
 };

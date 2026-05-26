@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Inviter.Api.Data;
+using Inviter.Api.Features.Admin;
 using Inviter.Api.Features.Events;
 using Inviter.Api.Features.Invitees;
 using Inviter.Api.Features.Rsvps;
@@ -50,6 +51,7 @@ using (var scope = app.Services.CreateScope())
 app.MapEventEndpoints();
 app.MapRsvpEndpoints();
 app.MapInviteeEndpoints();
+app.MapAdminEndpoints();
 
 app.Run();
 

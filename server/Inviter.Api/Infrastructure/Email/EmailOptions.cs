@@ -16,4 +16,5 @@ public class EmailOptions
 public class AppOptions
 {
     public string BaseUrl { get; set; } = "http://localhost:5173";
+    public string DashboardSlug { get; set; } = "";
 }
