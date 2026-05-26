@@ -13,6 +13,7 @@ import type {
   Rsvp,
   SendInvitationsInput,
   SendInvitationsResponse,
+  UploadEventImageResponse,
 } from './types';
 
 export class ApiError extends Error {
@@ -73,6 +74,31 @@ export const api = {
     request<void>(`/api/manage/${encodeURIComponent(adminToken)}`, {
       method: 'PUT',
       body: JSON.stringify(input),
+    }),
+
+  uploadEventImage: async (adminToken: string, file: File): Promise<UploadEventImageResponse> => {
+    const form = new FormData();
+    form.append('file', file);
+    const res = await fetch(`/api/manage/${encodeURIComponent(adminToken)}/image`, {
+      method: 'POST',
+      body: form,
+    });
+    if (!res.ok) {
+      let message = res.statusText;
+      try {
+        const body = await res.json();
+        message = body?.errors?.image?.[0] || body?.title || body?.detail || message;
+      } catch {
+        // ignore
+      }
+      throw new ApiError(res.status, message);
+    }
+    return res.json() as Promise<UploadEventImageResponse>;
+  },
+
+  deleteEventImage: (adminToken: string) =>
+    request<void>(`/api/manage/${encodeURIComponent(adminToken)}/image`, {
+      method: 'DELETE',
     }),
 
   deleteRsvp: (adminToken: string, rsvpId: string) =>

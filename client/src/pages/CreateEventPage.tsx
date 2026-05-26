@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
+import { toast } from 'sonner';
 import { CalendarClock, Sparkles, X } from 'lucide-react';
 import { api, ApiError } from '../api/client';
 import type { ContactRequirement } from '../api/types';
@@ -13,6 +14,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Field } from '@/components/Field';
 import { DateTimePicker } from '@/components/DateTimePicker';
+import { ImageDropZone } from '@/components/ImageDropZone';
 import { fromDatetimeLocalValue } from '../lib/format';
 import { rememberEvent } from '../lib/myEvents';
 
@@ -28,8 +30,22 @@ export function CreateEventPage() {
   const [contactRequirement, setContactRequirement] = useState<ContactRequirement>('None');
   const [organizerName, setOrganizerName] = useState('');
   const [organizerEmail, setOrganizerEmail] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function pickImage(file: File) {
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  }
+
+  function clearImage() {
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImageFile(null);
+    setImagePreview(null);
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -65,6 +81,15 @@ export function CreateEventPage() {
         adminToken: created.adminToken,
         createdAt: created.createdAt,
       });
+      if (imageFile) {
+        try {
+          await api.uploadEventImage(created.adminToken, imageFile);
+        } catch {
+          toast.error(
+            'Eventet er oprettet, men billedet kunne ikke uploades. Du kan prøve igen fra event-siden.',
+          );
+        }
+      }
       navigate(`/manage/${created.adminToken}`, { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Kunne ikke oprette event.');
@@ -268,6 +293,18 @@ export function CreateEventPage() {
                 />
               </Field>
             </div>
+
+            <Field
+              label="Eventbillede (valgfri)"
+              hint="Vises øverst på invitationssiden og i invitations-mailen."
+            >
+              <ImageDropZone
+                imageUrl={imagePreview}
+                onPick={pickImage}
+                onRemove={clearImage}
+                disabled={submitting}
+              />
+            </Field>
 
             {error && <p className="text-destructive text-sm">{error}</p>}
 

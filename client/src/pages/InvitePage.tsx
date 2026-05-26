@@ -148,6 +148,9 @@ export function InvitePage() {
             'linear-gradient(135deg, var(--color-warm-from) 0%, var(--color-warm-to) 100%)',
         }}
       >
+        {event.imageUrl && (
+          <img src={event.imageUrl} alt="" className="aspect-[3/2] w-full object-cover" />
+        )}
         <CardContent className="space-y-4 px-8 py-10 sm:px-10 sm:py-14">
           <div className="text-foreground/70 inline-flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
             Du er inviteret

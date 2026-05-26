@@ -12,6 +12,7 @@ export interface EventPublic {
   allowMaybe: boolean;
   rsvpDeadline: string | null;
   contactRequirement: ContactRequirement;
+  imageUrl: string | null;
 }
 
 export interface Rsvp {
@@ -38,6 +39,7 @@ export interface EventAdmin {
   contactRequirement: ContactRequirement;
   organizerEmail: string | null;
   organizerName: string | null;
+  imageUrl: string | null;
   rsvps: Rsvp[];
 }
 
@@ -55,6 +57,7 @@ export interface EventCreated {
   contactRequirement: ContactRequirement;
   organizerEmail: string | null;
   organizerName: string | null;
+  imageUrl: string | null;
 }
 
 export interface CreateEventInput {
@@ -110,6 +113,10 @@ export interface SendInvitationsInput {
 
 export interface SendInvitationsResponse {
   enqueued: number;
+}
+
+export interface UploadEventImageResponse {
+  imageUrl: string;
 }
 
 export type MetricsPeriod = '7d' | '30d' | '90d' | 'all';
