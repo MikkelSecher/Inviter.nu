@@ -1,5 +1,6 @@
 using Inviter.Api.Data;
 using Inviter.Api.Infrastructure.Email;
+using Inviter.Api.Infrastructure.Images;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
@@ -13,7 +14,10 @@ namespace Inviter.Api.Tests;
 public class InviterApiFactory : WebApplicationFactory<Program>
 {
     private readonly SqliteConnection _connection = new("DataSource=:memory:");
+    private readonly string _imageRoot = Path.Combine(
+        Path.GetTempPath(), "inviter-tests", Guid.NewGuid().ToString("N"));
     public FakeEmailQueue Emails { get; } = new();
+    public string ImageRoot => _imageRoot;
 
     public InviterApiFactory()
     {
@@ -39,6 +43,9 @@ public class InviterApiFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<IEmailQueue>();
             services.AddSingleton<IEmailQueue>(Emails);
+
+            services.RemoveAll<EventImageStorage>();
+            services.AddSingleton(new EventImageStorage(_imageRoot));
         });
     }
 
@@ -47,6 +54,8 @@ public class InviterApiFactory : WebApplicationFactory<Program>
         if (disposing)
         {
             _connection.Dispose();
+            try { if (Directory.Exists(_imageRoot)) Directory.Delete(_imageRoot, recursive: true); }
+            catch { /* best-effort cleanup */ }
         }
         base.Dispose(disposing);
     }

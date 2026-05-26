@@ -6,6 +6,7 @@ services:
       ASPNETCORE_URLS: http://0.0.0.0:8080
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__Default: "Data Source=/data/inviter.db"
+      App__DataPath: /data
       Email__SmtpHost: ${SMTP_HOST:-}
       Email__SmtpPort: ${SMTP_PORT:-587}
       Email__SmtpUser: ${SMTP_USER:-}

@@ -34,7 +34,8 @@ public record EventPublicDto(
     string InviteToken,
     bool AllowMaybe,
     DateTime? RsvpDeadline,
-    ContactRequirement ContactRequirement);
+    ContactRequirement ContactRequirement,
+    string? ImageUrl);
 
 public record EventCreatedDto(
     Guid Id,
@@ -49,7 +50,8 @@ public record EventCreatedDto(
     DateTime? RsvpDeadline,
     ContactRequirement ContactRequirement,
     string? OrganizerEmail,
-    string? OrganizerName);
+    string? OrganizerName,
+    string? ImageUrl);
 
 public record EventAdminDto(
     Guid Id,
@@ -65,4 +67,13 @@ public record EventAdminDto(
     ContactRequirement ContactRequirement,
     string? OrganizerEmail,
     string? OrganizerName,
+    string? ImageUrl,
     IReadOnlyList<RsvpDto> Rsvps);
+
+public record UploadEventImageResponse(string ImageUrl);
+
+public static class EventImageUrl
+{
+    public static string? Build(string? imageFileName)
+        => string.IsNullOrEmpty(imageFileName) ? null : $"/api/event-images/{imageFileName}";
+}

@@ -10,5 +10,7 @@ public static class EventEndpoints
         api.MapGet("/invite/{inviteToken}", GetEventPublic.Handle);
         api.MapGet("/manage/{adminToken}", GetEventAdmin.Handle);
         api.MapPut("/manage/{adminToken}", UpdateEvent.Handle);
+        api.MapPost("/manage/{adminToken}/image", UploadEventImage.Handle).DisableAntiforgery();
+        api.MapDelete("/manage/{adminToken}/image", DeleteEventImage.Handle);
     }
 }

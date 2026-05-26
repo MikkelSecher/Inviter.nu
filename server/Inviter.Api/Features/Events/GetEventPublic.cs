@@ -13,6 +13,7 @@ public static class GetEventPublic
 
         return Results.Ok(new EventPublicDto(
             ev.Id, ev.Title, ev.Description, ev.Location, ev.StartsAt, ev.InviteToken,
-            ev.AllowMaybe, ev.RsvpDeadline, ev.ContactRequirement));
+            ev.AllowMaybe, ev.RsvpDeadline, ev.ContactRequirement,
+            EventImageUrl.Build(ev.ImageFileName)));
     }
 }
