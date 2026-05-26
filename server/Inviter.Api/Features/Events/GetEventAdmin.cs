@@ -23,6 +23,7 @@ public static class GetEventAdmin
             ev.InviteToken, ev.AdminToken, ev.CreatedAt,
             ev.AllowMaybe, ev.RsvpDeadline, ev.ContactRequirement,
             ev.OrganizerEmail, ev.OrganizerName,
+            EventImageUrl.Build(ev.ImageFileName),
             rsvps));
     }
 }

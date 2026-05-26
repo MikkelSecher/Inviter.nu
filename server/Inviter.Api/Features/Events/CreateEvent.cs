@@ -51,6 +51,7 @@ public static class CreateEvent
             ev.Id, ev.Title, ev.Description, ev.Location, ev.StartsAt,
             ev.InviteToken, ev.AdminToken, ev.CreatedAt,
             ev.AllowMaybe, ev.RsvpDeadline, ev.ContactRequirement,
-            ev.OrganizerEmail, ev.OrganizerName));
+            ev.OrganizerEmail, ev.OrganizerName,
+            EventImageUrl.Build(ev.ImageFileName)));
     }
 }

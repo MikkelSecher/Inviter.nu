@@ -5,8 +5,11 @@ using Inviter.Api.Features.Events;
 using Inviter.Api.Features.Invitees;
 using Inviter.Api.Features.Rsvps;
 using Inviter.Api.Infrastructure.Email;
+using Inviter.Api.Infrastructure.Images;
 using Inviter.Api.Infrastructure.Metrics;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Options;
 using OpenTelemetry.Metrics;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -36,6 +39,17 @@ builder.Services.AddScoped<IEmailSender, MailKitEmailSender>();
 builder.Services.AddSingleton<IEmailQueue, ChannelEmailQueue>();
 builder.Services.AddHostedService<EmailDispatcher>();
 
+builder.Services.AddSingleton(sp =>
+{
+    var appOptions = sp.GetRequiredService<IOptions<AppOptions>>().Value;
+    var env = sp.GetRequiredService<IWebHostEnvironment>();
+    var dataPath = string.IsNullOrWhiteSpace(appOptions.DataPath)
+        ? Path.Combine(env.ContentRootPath, "data")
+        : appOptions.DataPath;
+    return new EventImageStorage(Path.Combine(dataPath, "event-images"));
+});
+builder.Services.AddSingleton<ImageProcessor>();
+
 builder.Services.AddSingleton<AppMetrics>();
 builder.Services.AddOpenTelemetry()
     .WithMetrics(m => m
@@ -56,6 +70,13 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
 }
+
+var imageStorage = app.Services.GetRequiredService<EventImageStorage>();
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(imageStorage.RootPath),
+    RequestPath = "/api/event-images",
+});
 
 app.MapEventEndpoints();
 app.MapRsvpEndpoints();

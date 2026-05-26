@@ -8,7 +8,12 @@ public static class InvitationTemplate
 {
     private static readonly CultureInfo DanishCulture = new("da-DK");
 
-    public static QueuedEmail Build(Event ev, Invitee invitee, string baseUrl, bool isResend)
+    public static QueuedEmail Build(
+        Event ev,
+        Invitee invitee,
+        string baseUrl,
+        bool isResend,
+        InlineAttachment? image = null)
     {
         var inviteUrl = $"{baseUrl.TrimEnd('/')}/invite/{ev.InviteToken}?i={invitee.Id}";
         var title = WebUtility.HtmlEncode(ev.Title);
@@ -43,12 +48,17 @@ public static class InvitationTemplate
             ? ""
             : $"<p style=\"margin: 24px 0 0; line-height: 1.5;\">Hilsen,<br>{WebUtility.HtmlEncode(organizer)}</p>";
 
+        var imageRow = image is null
+            ? ""
+            : $"<tr><td style=\"padding: 0;\"><img src=\"cid:{image.ContentId}\" width=\"560\" alt=\"\" style=\"display: block; width: 100%; height: auto; border-radius: 12px 12px 0 0;\"></td></tr>";
+
         var html = $"""
 <!doctype html>
 <html lang="da">
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #2a1a1a; background: #fdf8f3; margin: 0; padding: 24px;">
-  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width: 560px; margin: 0 auto; background: #fffdf9; border-radius: 12px; padding: 32px;">
-    <tr><td>
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width: 560px; margin: 0 auto; background: #fffdf9; border-radius: 12px; overflow: hidden;">
+    {imageRow}
+    <tr><td style="padding: 32px;">
       <p style="margin: 0 0 8px; font-size: 12px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: #8a6e6e;">Du er inviteret</p>
       <h1 style="font-family: Georgia, 'Times New Roman', serif; font-size: 28px; margin: 0 0 24px; line-height: 1.15;">{title}</h1>
       {resendLine}
@@ -94,6 +104,7 @@ Svar pÃ¥ invitationen:
             Subject: subject,
             HtmlBody: html,
             TextBody: text,
-            Kind: isResend ? "InvitationResend" : "Invitation");
+            Kind: isResend ? "InvitationResend" : "Invitation",
+            InlineAttachments: image is null ? null : [image]);
     }
 }

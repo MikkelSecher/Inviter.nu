@@ -1,8 +1,11 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Inviter.Api.Domain;
 using Inviter.Api.Features.Invitees;
 using Inviter.Api.Features.Rsvps;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Inviter.Api.Tests;
 
@@ -313,5 +316,54 @@ public class InviteesTests : IClassFixture<InviterApiFactory>
         var resp = await _client.PostAsJsonAsync(
             "/api/manage/wrong-token/invitees/send", req, TestJson.Options);
         Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+    }
+
+    // ---------- Inline image in invitation email ----------
+
+    private async Task UploadImageAsync(string adminToken)
+    {
+        using var image = new Image<Rgba32>(48, 32, new Rgba32(120, 40, 60));
+        using var ms = new MemoryStream();
+        image.SaveAsPng(ms);
+        var content = new ByteArrayContent(ms.ToArray());
+        content.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+        var form = new MultipartFormDataContent { { content, "file", "pic.png" } };
+        var resp = await _client.PostAsync($"/api/manage/{adminToken}/image", form);
+        resp.EnsureSuccessStatusCode();
+    }
+
+    [Fact]
+    public async Task Send_WithoutImage_HasNoInlineAttachment()
+    {
+        var ev = await TestHelpers.CreateEventAsync(_client);
+        await AddAsync(ev.AdminToken, ("a@example.com", null));
+        var before = _factory.Emails.Enqueued.Count;
+
+        var req = new SendInvitationsRequest(null, OnlyUnsent: false);
+        await _client.PostAsJsonAsync($"/api/manage/{ev.AdminToken}/invitees/send", req, TestJson.Options);
+
+        var sent = _factory.Emails.Enqueued.Skip(before).Single();
+        Assert.True(sent.InlineAttachments is null or { Count: 0 });
+        Assert.DoesNotContain("cid:event-image-", sent.HtmlBody);
+    }
+
+    [Fact]
+    public async Task Send_WithImage_EmbedsInlineJpegWithMatchingCid()
+    {
+        var ev = await TestHelpers.CreateEventAsync(_client);
+        await UploadImageAsync(ev.AdminToken);
+        await AddAsync(ev.AdminToken, ("a@example.com", null));
+        var before = _factory.Emails.Enqueued.Count;
+
+        var req = new SendInvitationsRequest(null, OnlyUnsent: false);
+        await _client.PostAsJsonAsync($"/api/manage/{ev.AdminToken}/invitees/send", req, TestJson.Options);
+
+        var sent = _factory.Emails.Enqueued.Skip(before).Single();
+        Assert.NotNull(sent.InlineAttachments);
+        var attachment = Assert.Single(sent.InlineAttachments!);
+        Assert.Equal($"event-image-{ev.Id}", attachment.ContentId);
+        Assert.Equal("image/jpeg", attachment.MediaType);
+        Assert.NotEmpty(attachment.Content);
+        Assert.Contains($"cid:event-image-{ev.Id}", sent.HtmlBody);
     }
 }

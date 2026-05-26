@@ -45,6 +45,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Field } from '@/components/Field';
 import { DateTimePicker } from '@/components/DateTimePicker';
+import { ImageDropZone } from '@/components/ImageDropZone';
 import { StatusBadge, statusLabel } from '@/components/StatusBadge';
 import { cn } from '@/lib/utils';
 import { formatEventTime, fromDatetimeLocalValue, toDatetimeLocalValue } from '../lib/format';
@@ -135,6 +136,14 @@ export function ManagePage() {
       transition={{ duration: 0.35, ease: 'easeOut' }}
       className="space-y-8"
     >
+      {event.imageUrl && (
+        <img
+          src={event.imageUrl}
+          alt=""
+          className="aspect-[3/2] w-full rounded-2xl object-cover shadow-sm"
+        />
+      )}
+
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-2">
           <h1
@@ -193,6 +202,7 @@ export function ManagePage() {
               adminToken={token}
               hasExistingMaybe={grouped.Maybe.length > 0}
               onCancel={() => setEditing(false)}
+              onImageChanged={load}
               onSaved={async () => {
                 setEditing(false);
                 await load();
@@ -367,12 +377,14 @@ function EditForm({
   event,
   onCancel,
   onSaved,
+  onImageChanged,
   adminToken,
   hasExistingMaybe,
 }: {
   event: EventAdmin;
   onCancel: () => void;
   onSaved: () => void;
+  onImageChanged: () => Promise<void>;
   adminToken: string;
   hasExistingMaybe: boolean;
 }) {
@@ -392,6 +404,35 @@ function EditForm({
   const [organizerEmail, setOrganizerEmail] = useState(event.organizerEmail ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [imageBusy, setImageBusy] = useState(false);
+  const [confirmImageRemoval, setConfirmImageRemoval] = useState(false);
+
+  async function uploadImage(file: File) {
+    setImageBusy(true);
+    try {
+      await api.uploadEventImage(adminToken, file);
+      await onImageChanged();
+      toast.success('Billede opdateret');
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Kunne ikke uploade billedet.');
+    } finally {
+      setImageBusy(false);
+    }
+  }
+
+  async function removeImage() {
+    setConfirmImageRemoval(false);
+    setImageBusy(true);
+    try {
+      await api.deleteEventImage(adminToken);
+      await onImageChanged();
+      toast.success('Billede fjernet');
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Kunne ikke fjerne billedet.');
+    } finally {
+      setImageBusy(false);
+    }
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -431,9 +472,22 @@ function EditForm({
   }
 
   return (
+    <>
     <Card>
       <CardContent className="pt-6">
         <form onSubmit={onSubmit} className="space-y-5">
+          <Field
+            label="Eventbillede (valgfri)"
+            hint="Vises øverst på invitationssiden og i invitations-mailen."
+          >
+            <ImageDropZone
+              imageUrl={event.imageUrl}
+              onPick={uploadImage}
+              onRemove={() => setConfirmImageRemoval(true)}
+              busy={imageBusy}
+            />
+          </Field>
+
           <Field label="Titel" htmlFor="edit-title">
             <Input
               id="edit-title"
@@ -597,6 +651,25 @@ function EditForm({
         </form>
       </CardContent>
     </Card>
+
+    <AlertDialog
+      open={confirmImageRemoval}
+      onOpenChange={(open) => !open && setConfirmImageRemoval(false)}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Fjern billede?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Billedet fjernes fra invitationssiden og fremtidige invitations-mails.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Annullér</AlertDialogCancel>
+          <AlertDialogAction onClick={removeImage}>Fjern</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
 
