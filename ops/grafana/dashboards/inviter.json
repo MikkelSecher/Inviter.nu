@@ -33,17 +33,35 @@
       ]
     },
     {
-      "type": "timeseries",
-      "title": "Emails sent per minute (by kind)",
+      "type": "barchart",
+      "title": "Emails sent",
       "datasource": { "type": "prometheus", "uid": "Prometheus" },
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 9 },
-      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
-      "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true } },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "lineWidth": 1, "fillOpacity": 80, "gradientMode": "none", "axisPlacement": "auto" }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "vertical",
+        "stacking": "normal",
+        "showValue": "auto",
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 100,
+        "groupWidth": 0.7,
+        "barWidth": 0.97,
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi" }
+      },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (kind) (rate(inviter_api_emails_sent_total[5m])) * 60",
-          "legendFormat": "{{kind}}"
+          "expr": "sum by (kind) (last_over_time(emails_sent_total[1m]) - last_over_time(emails_sent_total[1m] offset 1m))",
+          "legendFormat": "{{kind}}",
+          "interval": "1m",
+          "range": true
         }
       ]
     },
@@ -55,7 +73,7 @@
       "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "none" },
       "targets": [
-        { "refId": "A", "expr": "inviter_api_events_total" }
+        { "refId": "A", "expr": "events" }
       ]
     },
     {
@@ -66,7 +84,7 @@
       "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "none" },
       "targets": [
-        { "refId": "A", "expr": "inviter_api_upcoming_events_total" }
+        { "refId": "A", "expr": "upcoming_events" }
       ]
     },
     {
@@ -77,7 +95,7 @@
       "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "none" },
       "targets": [
-        { "refId": "A", "expr": "inviter_api_rsvps_total" }
+        { "refId": "A", "expr": "rsvps" }
       ]
     },
     {
@@ -88,7 +106,7 @@
       "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "none" },
       "targets": [
-        { "refId": "A", "expr": "inviter_api_invitees_total" }
+        { "refId": "A", "expr": "invitees" }
       ]
     },
     {
@@ -99,11 +117,11 @@
       "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
       "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true } },
       "targets": [
-        { "refId": "A", "expr": "inviter_api_events_total", "legendFormat": "events" },
-        { "refId": "B", "expr": "inviter_api_rsvps_total", "legendFormat": "rsvps" },
-        { "refId": "C", "expr": "inviter_api_invitees_total", "legendFormat": "invitees" },
-        { "refId": "D", "expr": "inviter_api_upcoming_events_total", "legendFormat": "upcoming events" },
-        { "refId": "E", "expr": "inviter_api_emails_logged_total", "legendFormat": "emails logged" }
+        { "refId": "A", "expr": "events", "legendFormat": "events" },
+        { "refId": "B", "expr": "rsvps", "legendFormat": "rsvps" },
+        { "refId": "C", "expr": "invitees", "legendFormat": "invitees" },
+        { "refId": "D", "expr": "upcoming_events", "legendFormat": "upcoming events" },
+        { "refId": "E", "expr": "emails_logged", "legendFormat": "emails logged" }
       ]
     }
   ],
