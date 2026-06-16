@@ -57,22 +57,22 @@ export function MetricsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-2">
+    <div className="space-y-8">
+      <header className="border-b pb-6">
         <h1
-          className="font-serif text-4xl tracking-tight"
+          className="font-serif text-5xl leading-none tracking-tight sm:text-6xl"
           style={{ fontVariationSettings: '"opsz" 144' }}
         >
           Metrics
         </h1>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-muted-foreground mt-3 max-w-2xl text-sm leading-6">
           Snapshot pr. periode. Mails er ikke knyttet til events, så filteret for fremtidige events
           påvirker ikke mailtallet.
         </p>
       </header>
 
       <Card>
-        <CardContent className="space-y-4 pt-6">
+        <CardContent className="flex flex-wrap items-center justify-between gap-4 pt-6">
           <div className="flex flex-wrap items-center gap-2">
             {PERIODS.map((p) => (
               <Button

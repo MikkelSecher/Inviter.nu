@@ -7,14 +7,14 @@ export function Layout() {
     <div className="bg-background text-foreground relative min-h-full">
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[420px] opacity-70"
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[460px] opacity-80"
         style={{
           background:
-            'radial-gradient(ellipse 70% 60% at 50% -10%, var(--color-warm-from) 0%, transparent 70%)',
+            'linear-gradient(180deg, var(--color-warm-from) 0%, transparent 76%)',
         }}
       />
       <header className="border-border/70 bg-background/60 supports-[backdrop-filter]:bg-background/40 sticky top-0 z-30 border-b backdrop-blur">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
           <Link
             to="/"
             className="font-serif text-xl tracking-tight"
@@ -50,7 +50,7 @@ export function Layout() {
           </nav>
         </div>
       </header>
-      <main className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
+      <main className="mx-auto max-w-6xl px-4 py-10 sm:py-14">
         <Outlet />
       </main>
       <Toaster richColors closeButton position="bottom-right" />

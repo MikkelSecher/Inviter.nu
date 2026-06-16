@@ -33,10 +33,10 @@ export function MyEventsPage() {
 
   if (events.length === 0) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="font-serif text-3xl tracking-tight sm:text-4xl">Mine events</h1>
-          <p className="text-muted-foreground mt-2 text-sm">
+      <div className="space-y-8">
+        <div className="border-b pb-6">
+          <h1 className="font-serif text-5xl leading-none tracking-tight sm:text-6xl">Mine events</h1>
+          <p className="text-muted-foreground mt-3 max-w-2xl text-sm leading-6">
             Du har ikke oprettet nogen events i denne browser endnu.
           </p>
         </div>
@@ -55,15 +55,15 @@ export function MyEventsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="font-serif text-3xl tracking-tight sm:text-4xl">Mine events</h1>
-        <p className="text-muted-foreground mt-2 text-sm">
+    <div className="space-y-8">
+      <div className="border-b pb-6">
+        <h1 className="font-serif text-5xl leading-none tracking-tight sm:text-6xl">Mine events</h1>
+        <p className="text-muted-foreground mt-3 max-w-2xl text-sm leading-6">
           Gemt lokalt i denne browser. Mister du browseren, mister du listen — ikke selve eventet.
         </p>
       </div>
 
-      <ul className="space-y-3">
+      <ul className="grid gap-3 lg:grid-cols-2">
         <AnimatePresence initial={false}>
           {events.map((ev) => (
             <motion.li

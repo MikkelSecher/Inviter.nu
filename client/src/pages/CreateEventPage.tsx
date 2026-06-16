@@ -103,26 +103,43 @@ export function CreateEventPage() {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: 'easeOut' }}
-      className="space-y-8"
+      className="grid gap-8 lg:grid-cols-[minmax(0,0.85fr)_minmax(460px,1.15fr)] lg:items-start"
     >
+      <section className="space-y-6 lg:sticky lg:top-24">
       <div className="space-y-3">
         <div className="text-primary inline-flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
           <Sparkles className="size-3.5" />
           Et nyt event
         </div>
         <h1
-          className="font-serif text-4xl leading-[1.05] tracking-tight sm:text-5xl"
+          className="font-serif text-5xl leading-[0.98] tracking-tight sm:text-6xl"
           style={{ fontVariationSettings: '"opsz" 144' }}
         >
           Saml folk omkring noget rart.
         </h1>
-        <p className="text-muted-foreground max-w-prose text-base">
+        <p className="text-muted-foreground max-w-prose text-base leading-7">
           Udfyld det vigtigste. Du får et delbart invite-link og en hemmelig admin-URL bagefter — så
           kan du følge med i hvem der kommer.
         </p>
       </div>
 
-      <Card>
+      <div className="divide-border divide-y border-y">
+        <div className="grid gap-1 py-4">
+          <div className="text-sm font-semibold">1. Opret eventet</div>
+          <p className="text-muted-foreground text-sm">Skriv dato, sted og det vigtigste for gæsterne.</p>
+        </div>
+        <div className="grid gap-1 py-4">
+          <div className="text-sm font-semibold">2. Del invitationen</div>
+          <p className="text-muted-foreground text-sm">Send linket direkte eller brug invitationslisten.</p>
+        </div>
+        <div className="grid gap-1 py-4">
+          <div className="text-sm font-semibold">3. Følg svarene</div>
+          <p className="text-muted-foreground text-sm">Admin-siden samler tilmeldinger og kontaktinfo.</p>
+        </div>
+      </div>
+      </section>
+
+      <Card className="shadow-lg shadow-primary/5">
         <CardContent className="pt-6">
           <form onSubmit={onSubmit} className="space-y-5">
             <Field label="Titel" htmlFor="title">

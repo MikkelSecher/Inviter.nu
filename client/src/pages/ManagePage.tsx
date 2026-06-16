@@ -140,14 +140,14 @@ export function ManagePage() {
         <img
           src={event.imageUrl}
           alt=""
-          className="aspect-[3/2] w-full rounded-2xl object-cover shadow-sm"
+          className="aspect-[16/7] w-full rounded-lg object-cover shadow-sm ring-1 ring-border"
         />
       )}
 
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4 border-b pb-6">
         <div className="space-y-2">
           <h1
-            className="font-serif text-3xl tracking-tight sm:text-4xl"
+            className="font-serif text-5xl leading-none tracking-tight sm:text-6xl"
             style={{ fontVariationSettings: '"opsz" 144' }}
           >
             {event.title}
@@ -185,6 +185,12 @@ export function ManagePage() {
         <Button variant="secondary" size="sm" onClick={() => setEditing((v) => !v)}>
           <Pencil className="mr-1 size-4" /> {editing ? 'Annullér' : 'Redigér'}
         </Button>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <SummaryTile label="Kommer" value={grouped.Yes.length} />
+        <SummaryTile label="Måske" value={grouped.Maybe.length} />
+        <SummaryTile label="Kan ikke" value={grouped.No.length} />
       </div>
 
       <AnimatePresence initial={false}>
@@ -371,6 +377,19 @@ function ContactLine({
     );
   }
   return null;
+}
+
+function SummaryTile({ label, value }: { label: string; value: number }) {
+  return (
+    <Card size="sm">
+      <CardContent className="space-y-1 pt-3">
+        <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+          {label}
+        </div>
+        <div className="font-serif text-3xl leading-none tracking-tight">{value}</div>
+      </CardContent>
+    </Card>
+  );
 }
 
 function EditForm({
