@@ -56,8 +56,11 @@ export function InvitePage() {
       .getInviteePrefill(token, inviteeToken)
       .then((prefill) => {
         if (cancelled) return;
-        setName((prev) => (prev === '' ? prefill.name ?? '' : prev));
-        setEmail((prev) => (prev === '' ? prefill.email ?? '' : prev));
+        setName((prev) => (prev === '' ? prefill.rsvpGuestName ?? prefill.name ?? '' : prev));
+        setStatus((prev) => prev ?? prefill.rsvpStatus);
+        setComment((prev) => (prev === '' ? prefill.rsvpComment ?? '' : prev));
+        setEmail((prev) => (prev === '' ? prefill.rsvpEmail ?? prefill.email ?? '' : prev));
+        setPhone((prev) => (prev === '' ? prefill.rsvpPhone ?? '' : prev));
       })
       .catch(() => {
         // Silently ignore unknown invitees; the public form still works.

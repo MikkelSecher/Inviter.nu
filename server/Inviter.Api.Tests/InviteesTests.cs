@@ -43,6 +43,53 @@ public class InviteesTests : IClassFixture<InviterApiFactory>
         var dto = await resp.Content.ReadFromJsonAsync<InviteePrefillDto>(TestJson.Options);
         Assert.Equal("Anne", dto!.Name);
         Assert.Equal("anne@example.com", dto.Email);
+        Assert.Null(dto.RsvpStatus);
+    }
+
+    [Fact]
+    public async Task Prefill_WithExistingRsvp_ReturnsLatestRsvp()
+    {
+        var ev = await TestHelpers.CreateEventAsync(_client,
+            contactRequirement: ContactRequirement.Email);
+        var added = await AddAsync(ev.AdminToken, ("anne@example.com", "Anne"));
+        var invitee = added.Added[0];
+
+        var first = new CreateRsvpRequest(
+            "Anne",
+            RsvpStatus.Yes,
+            "Glæder mig",
+            "anne@example.com",
+            null,
+            invitee.PersonalInviteToken);
+        var firstResp = await _client.PostAsJsonAsync(
+            $"/api/invite/{ev.InviteToken}/rsvp", first, TestJson.Options);
+        firstResp.EnsureSuccessStatusCode();
+
+        await Task.Delay(5);
+
+        var latest = new CreateRsvpRequest(
+            "Anne Andersen",
+            RsvpStatus.No,
+            "Jeg kan desværre ikke",
+            "anne.alt@example.com",
+            null,
+            invitee.PersonalInviteToken);
+        var latestResp = await _client.PostAsJsonAsync(
+            $"/api/invite/{ev.InviteToken}/rsvp", latest, TestJson.Options);
+        latestResp.EnsureSuccessStatusCode();
+
+        var resp = await _client.GetAsync(
+            $"/api/invite/{ev.InviteToken}/guest/{invitee.PersonalInviteToken}");
+
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var dto = await resp.Content.ReadFromJsonAsync<InviteePrefillDto>(TestJson.Options);
+        Assert.Equal("Anne", dto!.Name);
+        Assert.Equal("anne@example.com", dto.Email);
+        Assert.Equal("Anne Andersen", dto.RsvpGuestName);
+        Assert.Equal(RsvpStatus.No, dto.RsvpStatus);
+        Assert.Equal("Jeg kan desværre ikke", dto.RsvpComment);
+        Assert.Equal("anne.alt@example.com", dto.RsvpEmail);
+        Assert.Null(dto.RsvpPhone);
     }
 
     [Fact]

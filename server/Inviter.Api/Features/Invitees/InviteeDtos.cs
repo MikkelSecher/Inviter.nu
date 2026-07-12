@@ -12,7 +12,14 @@ public record InviteeDto(
     int SendCount,
     RsvpStatus? RsvpStatus);
 
-public record InviteePrefillDto(string? Name, string? Email);
+public record InviteePrefillDto(
+    string? Name,
+    string? Email,
+    string? RsvpGuestName,
+    RsvpStatus? RsvpStatus,
+    string? RsvpComment,
+    string? RsvpEmail,
+    string? RsvpPhone);
 
 public record AddInviteesRequest
 {

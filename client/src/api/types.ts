@@ -87,6 +87,11 @@ export interface CreateRsvpInput {
 export interface InviteePrefill {
   name: string | null;
   email: string | null;
+  rsvpGuestName: string | null;
+  rsvpStatus: RsvpStatus | null;
+  rsvpComment: string | null;
+  rsvpEmail: string | null;
+  rsvpPhone: string | null;
 }
 
 export interface Invitee {
