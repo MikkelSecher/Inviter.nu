@@ -98,15 +98,18 @@ public static class AddInvitees
 
         if (added.Count > 0)
         {
-            await InvitationEmails.EnqueueAsync(
-                ev,
-                added,
-                emailQueue,
-                appOptions.Value.BaseUrl,
-                imageStorage,
-                imageProcessor,
-                DateTime.UtcNow,
-                ct);
+            if (req.SendInvitations)
+            {
+                await InvitationEmails.EnqueueAsync(
+                    ev,
+                    added,
+                    emailQueue,
+                    appOptions.Value.BaseUrl,
+                    imageStorage,
+                    imageProcessor,
+                    DateTime.UtcNow,
+                    ct);
+            }
 
             await db.SaveChangesAsync(ct);
         }

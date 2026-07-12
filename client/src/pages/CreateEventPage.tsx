@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
-import { CalendarClock, Plus, Sparkles, X } from 'lucide-react';
+import { CalendarClock, Mail, Plus, Sparkles, X } from 'lucide-react';
 import { api, ApiError } from '../api/client';
 import type { AddInviteeEntry, ContactRequirement } from '../api/types';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Field } from '@/components/Field';
 import { DateTimePicker } from '@/components/DateTimePicker';
 import { ImageDropZone } from '@/components/ImageDropZone';
@@ -47,6 +57,7 @@ export function CreateEventPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [guestDrafts, setGuestDrafts] = useState<GuestDraft[]>(() => [newGuestDraft()]);
   const [submitting, setSubmitting] = useState(false);
+  const [invitationPromptOpen, setInvitationPromptOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function pickImage(file: File) {
@@ -76,21 +87,32 @@ export function CreateEventPage() {
     });
   }
 
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError(null);
+  function getGuests(): AddInviteeEntry[] {
+    return guestDrafts
+      .map((d) => ({ name: d.name.trim() || null, email: d.email.trim() || null }))
+      .filter((entry) => Boolean(entry.name || entry.email));
+  }
+
+  function validateForm() {
     if (!title.trim()) {
       setError('Titel er påkrævet.');
-      return;
+      return false;
     }
     if (!startsAt) {
       setError('Dato og tid er påkrævet.');
-      return;
+      return false;
     }
     if (rsvpDeadline && new Date(rsvpDeadline) > new Date(startsAt)) {
       setError('SU-deadline kan ikke ligge efter eventet.');
-      return;
+      return false;
     }
+    return true;
+  }
+
+  async function createEvent(sendInvitations: boolean) {
+    setError(null);
+    if (!validateForm()) return;
+
     setSubmitting(true);
     try {
       const created = await api.createEvent({
@@ -110,21 +132,7 @@ export function CreateEventPage() {
         adminToken: created.adminToken,
         createdAt: created.createdAt,
       });
-      const guests: AddInviteeEntry[] = guestDrafts
-        .map((d) => ({ name: d.name.trim() || null, email: d.email.trim() || null }))
-        .filter((entry) => Boolean(entry.name || entry.email));
-      if (guests.length > 0) {
-        try {
-          const added = await api.addInvitees(created.adminToken, guests);
-          if (added.skippedDuplicates.length > 0 || added.skippedInvalid.length > 0) {
-            toast.message('Nogle gæster blev sprunget over', {
-              description: 'Du kan rette gæstelisten fra admin-siden.',
-            });
-          }
-        } catch {
-          toast.error('Eventet er oprettet, men gæstelisten kunne ikke gemmes.');
-        }
-      }
+
       if (imageFile) {
         try {
           await api.uploadEventImage(created.adminToken, imageFile);
@@ -134,12 +142,45 @@ export function CreateEventPage() {
           );
         }
       }
+
+      const guests = getGuests();
+      if (guests.length > 0) {
+        try {
+          const added = await api.addInvitees(created.adminToken, guests, sendInvitations);
+          if (added.skippedDuplicates.length > 0 || added.skippedInvalid.length > 0) {
+            toast.message('Nogle gæster blev sprunget over', {
+              description: 'Du kan rette gæstelisten fra admin-siden.',
+            });
+          }
+          if (!sendInvitations && added.added.some((guest) => guest.email)) {
+            toast.message('Invitationer er ikke sendt endnu', {
+              description: 'Du kan sende dem senere fra gæstelisten på administrationssiden.',
+            });
+          }
+        } catch {
+          toast.error('Eventet er oprettet, men gæstelisten kunne ikke gemmes.');
+        }
+      }
       navigate(`/manage/${created.adminToken}`, { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Kunne ikke oprette event.');
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (!validateForm()) return;
+
+    const guests = getGuests();
+    if (guests.some((guest) => guest.email)) {
+      setInvitationPromptOpen(true);
+      return;
+    }
+
+    void createEvent(false);
   }
 
   return (
@@ -434,6 +475,50 @@ export function CreateEventPage() {
           </form>
         </CardContent>
       </Card>
+
+      <AlertDialog
+        open={invitationPromptOpen}
+        onOpenChange={(open) => {
+          if (!submitting) setInvitationPromptOpen(open);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogMedia>
+              <Mail className="size-5" />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Send invitationer nu?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Gæstelisten indeholder mindst én email-adresse. Du kan sende invitationerne med det
+              samme, eller gemme gæstelisten og sende dem manuelt senere via gæstelisten på
+              administrationssiden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setInvitationPromptOpen(false);
+                void createEvent(false);
+              }}
+              disabled={submitting}
+            >
+              Send manuelt senere
+            </AlertDialogAction>
+            <AlertDialogAction
+              type="button"
+              onClick={() => {
+                setInvitationPromptOpen(false);
+                void createEvent(true);
+              }}
+              disabled={submitting}
+            >
+              Send nu
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </motion.div>
   );
 }

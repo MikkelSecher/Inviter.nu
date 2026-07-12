@@ -14,7 +14,21 @@ public record InviteeDto(
 
 public record InviteePrefillDto(string? Name, string? Email);
 
-public record AddInviteesRequest(IReadOnlyList<AddInviteeEntry> Entries);
+public record AddInviteesRequest
+{
+    public AddInviteesRequest()
+    {
+    }
+
+    public AddInviteesRequest(IReadOnlyList<AddInviteeEntry> entries, bool sendInvitations = true)
+    {
+        Entries = entries;
+        SendInvitations = sendInvitations;
+    }
+
+    public IReadOnlyList<AddInviteeEntry> Entries { get; init; } = [];
+    public bool SendInvitations { get; init; } = true;
+}
 
 public record AddInviteeEntry(string? Email, string? Name);
 

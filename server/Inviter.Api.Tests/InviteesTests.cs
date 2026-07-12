@@ -148,6 +148,27 @@ public class InviteesTests : IClassFixture<InviterApiFactory>
     }
 
     [Fact]
+    public async Task Add_WithSendInvitationsFalse_DoesNotEnqueueEmails()
+    {
+        var ev = await TestHelpers.CreateEventAsync(_client);
+        var emailsBefore = _factory.Emails.Enqueued.Count;
+        var req = new AddInviteesRequest(
+            new List<AddInviteeEntry> { new("anne@example.com", "Anne") },
+            sendInvitations: false);
+
+        var resp = await _client.PostAsJsonAsync(
+            $"/api/manage/{ev.AdminToken}/invitees", req, TestJson.Options);
+
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var dto = await resp.Content.ReadFromJsonAsync<AddInviteesResponse>(TestJson.Options);
+        var added = Assert.Single(dto!.Added);
+        Assert.Equal("anne@example.com", added.Email);
+        Assert.Null(added.LastSentAt);
+        Assert.Equal(0, added.SendCount);
+        Assert.Equal(emailsBefore, _factory.Emails.Enqueued.Count);
+    }
+
+    [Fact]
     public async Task Add_EmptyEntries_Returns400()
     {
         var ev = await TestHelpers.CreateEventAsync(_client);

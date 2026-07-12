@@ -1,5 +1,6 @@
 import type {
   AddInviteeEntry,
+  AddInviteesInput,
   AddInviteesResponse,
   CreateEventInput,
   CreateRsvpInput,
@@ -117,10 +118,13 @@ export const api = {
   listInvitees: (adminToken: string) =>
     request<Invitee[]>(`/api/manage/${encodeURIComponent(adminToken)}/invitees`),
 
-  addInvitees: (adminToken: string, entries: AddInviteeEntry[]) =>
+  addInvitees: (adminToken: string, entries: AddInviteeEntry[], sendInvitations = true) =>
     request<AddInviteesResponse>(
       `/api/manage/${encodeURIComponent(adminToken)}/invitees`,
-      { method: 'POST', body: JSON.stringify({ entries }) },
+      {
+        method: 'POST',
+        body: JSON.stringify({ entries, sendInvitations } satisfies AddInviteesInput),
+      },
     ),
 
   updateInvitee: (adminToken: string, inviteeId: string, input: UpdateInviteeInput) =>

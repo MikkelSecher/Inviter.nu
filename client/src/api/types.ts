@@ -111,6 +111,11 @@ export interface AddInviteesResponse {
   skippedInvalid: string[];
 }
 
+export interface AddInviteesInput {
+  entries: AddInviteeEntry[];
+  sendInvitations?: boolean;
+}
+
 export interface SendInvitationsInput {
   inviteeIds: string[] | null;
   onlyUnsent: boolean;
