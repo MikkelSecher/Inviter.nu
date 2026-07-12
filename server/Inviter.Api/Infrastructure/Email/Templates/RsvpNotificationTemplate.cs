@@ -11,7 +11,6 @@ public static class RsvpNotificationTemplate
     public static QueuedEmail Build(Event ev, Rsvp rsvp, string baseUrl)
     {
         var adminUrl = $"{baseUrl.TrimEnd('/')}/manage/{ev.AdminToken}";
-        var title = WebUtility.HtmlEncode(ev.Title);
         var guestName = WebUtility.HtmlEncode(rsvp.GuestName);
         var submittedLocal = rsvp.SubmittedAt.ToLocalTime().ToString("d. MMMM yyyy 'kl.' HH:mm", DanishCulture);
         var greeting = string.IsNullOrWhiteSpace(ev.OrganizerName)
@@ -26,10 +25,17 @@ public static class RsvpNotificationTemplate
         };
         var statusColor = rsvp.Status switch
         {
-            RsvpStatus.Yes => "#3f7d4c",
-            RsvpStatus.No => "#8a3a3a",
-            RsvpStatus.Maybe => "#a37522",
-            _ => "#6b1f2c"
+            RsvpStatus.Yes => EmailTemplateLayout.StatusYes,
+            RsvpStatus.No => EmailTemplateLayout.StatusNo,
+            RsvpStatus.Maybe => EmailTemplateLayout.StatusMaybe,
+            _ => EmailTemplateLayout.Muted
+        };
+        var statusForeground = rsvp.Status switch
+        {
+            RsvpStatus.Yes => EmailTemplateLayout.StatusYesForeground,
+            RsvpStatus.No => EmailTemplateLayout.StatusNoForeground,
+            RsvpStatus.Maybe => EmailTemplateLayout.StatusMaybeForeground,
+            _ => EmailTemplateLayout.Foreground
         };
 
         var subject = $"{rsvp.GuestName} svarede på \"{ev.Title}\": {statusLabel}";
@@ -37,37 +43,31 @@ public static class RsvpNotificationTemplate
         var commentBlock = string.IsNullOrWhiteSpace(rsvp.Comment)
             ? ""
             : $"""
-<p style="margin: 16px 0 8px; line-height: 1.5;"><strong>Kommentar:</strong></p>
-<blockquote style="margin: 0 0 16px; padding: 12px 16px; background: #f6ece0; border-left: 3px solid #6b1f2c; border-radius: 4px; line-height: 1.5; white-space: pre-wrap;">{WebUtility.HtmlEncode(rsvp.Comment)}</blockquote>
+<p style="margin: 16px 0 8px; line-height: 1.55;"><strong>Kommentar:</strong></p>
+<blockquote style="margin: 0 0 16px; padding: 12px 16px; background: {EmailTemplateLayout.Muted}; border-left: 3px solid {EmailTemplateLayout.Primary}; border-radius: 8px; line-height: 1.55; white-space: pre-wrap;">{WebUtility.HtmlEncode(rsvp.Comment)}</blockquote>
 """;
 
         var contactBlock = (rsvp.Email, rsvp.Phone) switch
         {
-            ({ } e, _) when !string.IsNullOrWhiteSpace(e) => $"<p style=\"margin: 0 0 8px; line-height: 1.5;\"><strong>Email:</strong> <a href=\"mailto:{WebUtility.HtmlEncode(e)}\" style=\"color: #6b1f2c;\">{WebUtility.HtmlEncode(e)}</a></p>",
-            (_, { } p) when !string.IsNullOrWhiteSpace(p) => $"<p style=\"margin: 0 0 8px; line-height: 1.5;\"><strong>Telefon:</strong> <a href=\"tel:{WebUtility.HtmlEncode(p)}\" style=\"color: #6b1f2c;\">{WebUtility.HtmlEncode(p)}</a></p>",
+            ({ } e, _) when !string.IsNullOrWhiteSpace(e) => $"<p style=\"{EmailTemplateLayout.MetaStyle}\"><strong>Email:</strong> <a href=\"mailto:{WebUtility.HtmlEncode(e)}\" style=\"color: {EmailTemplateLayout.Primary};\">{WebUtility.HtmlEncode(e)}</a></p>",
+            (_, { } p) when !string.IsNullOrWhiteSpace(p) => $"<p style=\"{EmailTemplateLayout.MetaStyle}\"><strong>Telefon:</strong> <a href=\"tel:{WebUtility.HtmlEncode(p)}\" style=\"color: {EmailTemplateLayout.Primary};\">{WebUtility.HtmlEncode(p)}</a></p>",
             _ => ""
         };
 
-        var html = $"""
-<!doctype html>
-<html lang="da">
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #2a1a1a; background: #fdf8f3; margin: 0; padding: 24px;">
-  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width: 560px; margin: 0 auto; background: #fffdf9; border-radius: 12px; padding: 32px;">
-    <tr><td>
-      <h1 style="font-family: Georgia, 'Times New Roman', serif; font-size: 22px; margin: 0 0 16px;">Nyt svar på "{title}"</h1>
-      <p style="margin: 0 0 16px; line-height: 1.5;">{greeting},</p>
-      <p style="margin: 0 0 8px; line-height: 1.5;"><strong>{guestName}</strong> har svaret: <span style="display: inline-block; padding: 2px 10px; background: {statusColor}; color: #fdf8f3; border-radius: 999px; font-size: 13px; font-weight: 500;">{statusLabel}</span></p>
-      <p style="margin: 0 0 8px; line-height: 1.5;"><strong>Tidspunkt:</strong> {WebUtility.HtmlEncode(submittedLocal)}</p>
+        var html = EmailTemplateLayout.Shell(
+            $"Nyt svar fra {rsvp.GuestName}",
+            $"""
+      {EmailTemplateLayout.Eyebrow("Nyt svar")}
+      {EmailTemplateLayout.Heading($"Nyt svar på \"{ev.Title}\"", 24)}
+      <p style="{EmailTemplateLayout.ParagraphStyle}">{greeting},</p>
+      <p style="{EmailTemplateLayout.MetaStyle}"><strong>{guestName}</strong> har svaret: {EmailTemplateLayout.Pill(statusLabel, statusColor, statusForeground)}</p>
+      <p style="{EmailTemplateLayout.MetaStyle}"><strong>Tidspunkt:</strong> {WebUtility.HtmlEncode(submittedLocal)}</p>
       {contactBlock}
       {commentBlock}
       <p style="margin: 24px 0;">
-        <a href="{adminUrl}" style="display: inline-block; background: #6b1f2c; color: #fdf8f3; padding: 12px 20px; border-radius: 8px; text-decoration: none; font-weight: 500;">Se alle svar</a>
+        {EmailTemplateLayout.Button(adminUrl, "Se alle svar")}
       </p>
-    </td></tr>
-  </table>
-</body>
-</html>
-""";
+""");
 
         var textContact = (rsvp.Email, rsvp.Phone) switch
         {

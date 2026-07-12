@@ -1,4 +1,5 @@
 using Inviter.Api.Domain;
+using Inviter.Api.Infrastructure.Email;
 using Inviter.Api.Infrastructure.Email.Templates;
 
 namespace Inviter.Api.Tests;
@@ -7,6 +8,39 @@ public class EmailTemplateEncodingTests
 {
     [Fact]
     public void Templates_RenderDanishCharactersWithoutMojibake()
+    {
+        var emails = BuildSampleEmails();
+        var rendered = string.Join("\n", emails.SelectMany(e => new[] { e.Subject, e.HtmlBody, e.TextBody }));
+
+        Assert.Contains("Påmindelse", rendered);
+        Assert.Contains("Hvornår", rendered);
+        Assert.Contains("gæsterne", rendered);
+        Assert.Contains("Måske", rendered);
+        Assert.Contains("ændre", rendered);
+        Assert.Contains("åbne", rendered);
+        Assert.DoesNotContain("Ã", rendered);
+        Assert.DoesNotContain("â", rendered);
+        Assert.DoesNotContain("�", rendered);
+    }
+
+    [Fact]
+    public void Templates_UseAppDesignPalette()
+    {
+        var rendered = string.Join("\n", BuildSampleEmails().Select(e => e.HtmlBody));
+
+        Assert.Contains("Inter", rendered);
+        Assert.Contains("Fraunces", rendered);
+        Assert.Contains("#f7faf3", rendered);
+        Assert.Contains("#006049", rendered);
+        Assert.Contains("#cfdecf", rendered);
+        Assert.Contains("#ffe4af", rendered);
+        Assert.Contains("border-radius: 8px", rendered);
+        Assert.DoesNotContain("#6b1f2c", rendered);
+        Assert.DoesNotContain("#fdf8f3", rendered);
+        Assert.DoesNotContain("#fffdf9", rendered);
+    }
+
+    private static QueuedEmail[] BuildSampleEmails()
     {
         var ev = new Event
         {
@@ -36,23 +70,12 @@ public class EmailTemplateEncodingTests
             SubmittedAt = new DateTime(2026, 12, 1, 12, 0, 0, DateTimeKind.Utc),
         };
 
-        var emails = new[]
-        {
+        return
+        [
             AdminLinkTemplate.Build(ev, "https://example.test"),
             InvitationTemplate.Build(ev, invitee, "https://example.test", isResend: true),
             RsvpConfirmationTemplate.Build(ev, rsvp, "https://example.test"),
             RsvpNotificationTemplate.Build(ev, rsvp, "https://example.test"),
-        };
-        var rendered = string.Join("\n", emails.SelectMany(e => new[] { e.Subject, e.HtmlBody, e.TextBody }));
-
-        Assert.Contains("Påmindelse", rendered);
-        Assert.Contains("Hvornår", rendered);
-        Assert.Contains("gæsterne", rendered);
-        Assert.Contains("Måske", rendered);
-        Assert.Contains("ændre", rendered);
-        Assert.Contains("åbne", rendered);
-        Assert.DoesNotContain("Ã", rendered);
-        Assert.DoesNotContain("â", rendered);
-        Assert.DoesNotContain("�", rendered);
+        ];
     }
 }

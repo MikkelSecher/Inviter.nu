@@ -16,7 +16,6 @@ public static class InvitationTemplate
         InlineAttachment? image = null)
     {
         var inviteUrl = $"{baseUrl.TrimEnd('/')}/invite/{ev.InviteToken}?g={invitee.PersonalInviteToken}";
-        var title = WebUtility.HtmlEncode(ev.Title);
         var startsLocal = ev.StartsAt.ToLocalTime().ToString("dddd d. MMMM yyyy 'kl.' HH:mm", DanishCulture);
         var location = string.IsNullOrWhiteSpace(ev.Location) ? null : ev.Location;
         var organizer = string.IsNullOrWhiteSpace(ev.OrganizerName) ? null : ev.OrganizerName;
@@ -30,53 +29,46 @@ public static class InvitationTemplate
 
         var locationLine = location is null
             ? ""
-            : $"<p style=\"margin: 0 0 8px; line-height: 1.5;\"><strong>Sted:</strong> {WebUtility.HtmlEncode(location)}</p>";
+            : $"<p style=\"{EmailTemplateLayout.MetaStyle}\"><strong>Sted:</strong> {WebUtility.HtmlEncode(location)}</p>";
 
         var deadlineLine = ev.RsvpDeadline.HasValue
-            ? $"<p style=\"margin: 0 0 16px; line-height: 1.5; color: #6b1f2c;\"><strong>Svar senest:</strong> {WebUtility.HtmlEncode(ev.RsvpDeadline.Value.ToLocalTime().ToString("dddd d. MMMM yyyy 'kl.' HH:mm", DanishCulture))}</p>"
+            ? $"<p style=\"margin: 0 0 16px; line-height: 1.55; color: {EmailTemplateLayout.Primary};\"><strong>Svar senest:</strong> {WebUtility.HtmlEncode(ev.RsvpDeadline.Value.ToLocalTime().ToString("dddd d. MMMM yyyy 'kl.' HH:mm", DanishCulture))}</p>"
             : "";
 
         var descriptionBlock = string.IsNullOrWhiteSpace(ev.Description)
             ? ""
-            : $"<p style=\"margin: 16px 0; line-height: 1.5; white-space: pre-wrap;\">{WebUtility.HtmlEncode(ev.Description)}</p>";
+            : $"<p style=\"margin: 16px 0; line-height: 1.55; white-space: pre-wrap;\">{WebUtility.HtmlEncode(ev.Description)}</p>";
 
         var resendLine = isResend
-            ? "<p style=\"margin: 0 0 16px; line-height: 1.5; color: #8a6e6e; font-size: 14px;\">Du har modtaget denne invitation før - vi sender den igen som påmindelse.</p>"
+            ? $"<p style=\"margin: 0 0 16px; line-height: 1.55; color: {EmailTemplateLayout.MutedForeground}; font-size: 14px;\">Du har modtaget denne invitation før - vi sender den igen som påmindelse.</p>"
             : "";
 
         var organizerSignature = organizer is null
             ? ""
-            : $"<p style=\"margin: 24px 0 0; line-height: 1.5;\">Hilsen,<br>{WebUtility.HtmlEncode(organizer)}</p>";
+            : $"<p style=\"margin: 24px 0 0; line-height: 1.55;\">Hilsen,<br>{WebUtility.HtmlEncode(organizer)}</p>";
 
         var imageRow = image is null
             ? ""
-            : $"<tr><td style=\"padding: 0;\"><img src=\"cid:{image.ContentId}\" width=\"560\" alt=\"\" style=\"display: block; width: 100%; height: auto; border-radius: 12px 12px 0 0;\"></td></tr>";
+            : $"<tr><td style=\"padding: 0;\"><img src=\"cid:{image.ContentId}\" width=\"592\" alt=\"\" style=\"display: block; width: 100%; height: auto; border-radius: 8px 8px 0 0;\"></td></tr><tr><td style=\"height: 8px; background: {EmailTemplateLayout.Accent}; font-size: 0; line-height: 0;\">&nbsp;</td></tr>";
 
-        var html = $"""
-<!doctype html>
-<html lang="da">
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #2a1a1a; background: #fdf8f3; margin: 0; padding: 24px;">
-  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width: 560px; margin: 0 auto; background: #fffdf9; border-radius: 12px; overflow: hidden;">
-    {imageRow}
-    <tr><td style="padding: 32px;">
-      <p style="margin: 0 0 8px; font-size: 12px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: #8a6e6e;">Du er inviteret</p>
-      <h1 style="font-family: Georgia, 'Times New Roman', serif; font-size: 28px; margin: 0 0 24px; line-height: 1.15;">{title}</h1>
+        var html = EmailTemplateLayout.Shell(
+            $"Du er inviteret til {ev.Title}",
+            $"""
+      {EmailTemplateLayout.Eyebrow("Du er inviteret")}
+      {EmailTemplateLayout.Heading(ev.Title)}
       {resendLine}
-      <p style="margin: 0 0 16px; line-height: 1.5;">{greeting},</p>
-      <p style="margin: 0 0 8px; line-height: 1.5;"><strong>Hvornår:</strong> {WebUtility.HtmlEncode(startsLocal)}</p>
+      <p style="{EmailTemplateLayout.ParagraphStyle}">{greeting},</p>
+      <p style="{EmailTemplateLayout.MetaStyle}"><strong>Hvornår:</strong> {WebUtility.HtmlEncode(startsLocal)}</p>
       {locationLine}
       {deadlineLine}
       {descriptionBlock}
       <p style="margin: 24px 0;">
-        <a href="{inviteUrl}" style="display: inline-block; background: #6b1f2c; color: #fdf8f3; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 500;">Svar på invitationen</a>
+        {EmailTemplateLayout.Button(inviteUrl, "Svar på invitationen")}
       </p>
-      <p style="margin: 0; font-size: 13px; color: #8a6e6e; line-height: 1.5;">Eller åbn linket direkte:<br><a href="{inviteUrl}" style="color: #6b1f2c; word-break: break-all;">{inviteUrl}</a></p>
+      {EmailTemplateLayout.Note($"Eller åbn linket direkte:<br>{EmailTemplateLayout.TextLink(inviteUrl, inviteUrl)}")}
       {organizerSignature}
-    </td></tr>
-  </table>
-</body>
-</html>
-""";
+""",
+            image is null ? null : imageRow);
 
         var textLocationLine = location is null ? "" : $"Sted: {location}\n";
         var textDeadlineLine = ev.RsvpDeadline.HasValue

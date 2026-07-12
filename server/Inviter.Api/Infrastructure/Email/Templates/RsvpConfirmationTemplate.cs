@@ -27,30 +27,24 @@ public static class RsvpConfirmationTemplate
 
         var locationLine = location is null
             ? ""
-            : $"<p style=\"margin: 0 0 8px; line-height: 1.5;\"><strong>Sted:</strong> {WebUtility.HtmlEncode(location)}</p>";
+            : $"<p style=\"{EmailTemplateLayout.MetaStyle}\"><strong>Sted:</strong> {WebUtility.HtmlEncode(location)}</p>";
 
-        var html = $"""
-<!doctype html>
-<html lang="da">
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #2a1a1a; background: #fdf8f3; margin: 0; padding: 24px;">
-  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width: 560px; margin: 0 auto; background: #fffdf9; border-radius: 12px; padding: 32px;">
-    <tr><td>
-      <h1 style="font-family: Georgia, 'Times New Roman', serif; font-size: 24px; margin: 0 0 16px;">Tak for dit svar</h1>
-      <p style="margin: 0 0 16px; line-height: 1.5;">Hej {guestName},</p>
-      <p style="margin: 0 0 16px; line-height: 1.5;">Vi har modtaget dit svar til "<strong>{title}</strong>": <strong>{statusLabel}</strong>.</p>
-      <p style="margin: 0 0 8px; line-height: 1.5;"><strong>Hvornår:</strong> {WebUtility.HtmlEncode(startsLocal)}</p>
+        var html = EmailTemplateLayout.Shell(
+            $"Vi har modtaget dit svar til {ev.Title}",
+            $"""
+      {EmailTemplateLayout.Eyebrow("Svar modtaget")}
+      {EmailTemplateLayout.Heading("Tak for dit svar", 26)}
+      <p style="{EmailTemplateLayout.ParagraphStyle}">Hej {guestName},</p>
+      <p style="{EmailTemplateLayout.ParagraphStyle}">Vi har modtaget dit svar til "<strong>{title}</strong>": <strong>{statusLabel}</strong>.</p>
+      <p style="{EmailTemplateLayout.MetaStyle}"><strong>Hvornår:</strong> {WebUtility.HtmlEncode(startsLocal)}</p>
       {locationLine}
-      <p style="margin: 16px 0 24px; line-height: 1.5;">Du kan ændre dit svar når som helst ved at åbne invitationen igen:</p>
+      <p style="margin: 16px 0 24px; line-height: 1.55;">Du kan ændre dit svar når som helst ved at åbne invitationen igen:</p>
       <p style="margin: 0 0 24px;">
-        <a href="{inviteUrl}" style="display: inline-block; background: #6b1f2c; color: #fdf8f3; padding: 12px 20px; border-radius: 8px; text-decoration: none; font-weight: 500;">Åbn invitation</a>
+        {EmailTemplateLayout.Button(inviteUrl, "Åbn invitation")}
       </p>
-      <hr style="border: none; border-top: 1px solid #e8dccd; margin: 24px 0;">
-      <p style="margin: 0; font-size: 13px; color: #8a6e6e; line-height: 1.5;">Dette er en automatisk bekræftelse. Du modtager den fordi du svarede på en invitation til {title}.</p>
-    </td></tr>
-  </table>
-</body>
-</html>
-""";
+      {EmailTemplateLayout.Divider()}
+      {EmailTemplateLayout.Note($"Dette er en automatisk bekræftelse. Du modtager den fordi du svarede på en invitation til {title}.")}
+""");
 
         var textLocationLine = location is null ? "" : $"Sted: {location}\n";
 
