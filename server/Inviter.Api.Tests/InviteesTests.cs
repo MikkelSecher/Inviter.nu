@@ -113,9 +113,10 @@ public class InviteesTests : IClassFixture<InviterApiFactory>
     }
 
     [Fact]
-    public async Task Add_NameOnlyGuest_GeneratesPersonalInviteToken()
+    public async Task Add_NameOnlyGuest_GeneratesPersonalInviteToken_WhenEventRequiresEmailContact()
     {
-        var ev = await TestHelpers.CreateEventAsync(_client);
+        var ev = await TestHelpers.CreateEventAsync(_client,
+            contactRequirement: ContactRequirement.Email);
         var req = new AddInviteesRequest(new List<AddInviteeEntry>
             { new(null, "Anne") });
 
@@ -139,7 +140,8 @@ public class InviteesTests : IClassFixture<InviterApiFactory>
             $"/api/manage/{ev.AdminToken}/invitees", req, TestJson.Options);
         Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
         var problem = await TestHelpers.ReadProblemAsync(resp);
-        Assert.NotEmpty(TestHelpers.GetErrors(problem, "entries"));
+        var errors = TestHelpers.GetErrors(problem, "entries");
+        Assert.Contains(errors, e => e.Contains("navn"));
     }
 
     [Fact]

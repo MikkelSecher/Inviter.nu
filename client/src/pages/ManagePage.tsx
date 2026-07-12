@@ -829,7 +829,14 @@ function newDraft(seed: Partial<Omit<InviteeDraft, 'rowId'>> = {}): InviteeDraft
   };
 }
 
-function parseBulkPaste(text: string): { name: string; email: string }[] {
+function looksLikeEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function parseBulkPaste(
+  text: string,
+  field: 'name' | 'email',
+): { name: string; email: string }[] {
   return text
     .split(/[\n,;]+/)
     .map((t) => t.trim())
@@ -839,7 +846,10 @@ function parseBulkPaste(text: string): { name: string; email: string }[] {
       if (angleMatch) {
         return { name: angleMatch[1].trim(), email: angleMatch[2].trim() };
       }
-      return { name: '', email: token };
+      if (looksLikeEmail(token) || (field === 'email' && token.includes('@'))) {
+        return { name: '', email: token };
+      }
+      return { name: token, email: '' };
     });
 }
 
@@ -927,7 +937,7 @@ function InviteeSection({
     const text = e.clipboardData.getData('text');
     if (!/[\n,;]/.test(text)) return;
     e.preventDefault();
-    const parsed = parseBulkPaste(text);
+    const parsed = parseBulkPaste(text, field);
     if (parsed.length === 0) return;
     setDrafts((prev) => {
       const idx = prev.findIndex((d) => d.rowId === rowId);
@@ -974,7 +984,7 @@ function InviteeSection({
           parts.push(`${res.skippedDuplicates.length} allerede tilføjet`);
         if (res.skippedInvalid.length > 0)
           parts.push(`${res.skippedInvalid.length} ugyldige`);
-        toast.message(`Sprang ${skipped} adresser over`, { description: parts.join(' · ') });
+        toast.message(`Sprang ${skipped} linjer over`, { description: parts.join(' · ') });
       }
       if (res.added.length > 0 || skipped === entries.length) {
         setDrafts([newDraft()]);
@@ -1106,7 +1116,7 @@ function InviteeSection({
               </div>
               <div className="hidden grid-cols-[1fr_1.4fr_auto] gap-2 px-1 sm:grid">
                 <div className="text-muted-foreground text-xs">Navn (valgfri)</div>
-                <div className="text-muted-foreground text-xs">Email</div>
+                <div className="text-muted-foreground text-xs">Email (valgfri)</div>
                 <div />
               </div>
               <div className="space-y-2">

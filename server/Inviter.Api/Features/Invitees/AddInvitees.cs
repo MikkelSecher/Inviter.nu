@@ -15,13 +15,13 @@ public static class AddInvitees
         if (req.Entries is null || req.Entries.Count == 0)
             return Results.ValidationProblem(new Dictionary<string, string[]>
             {
-                ["entries"] = new[] { "Tilføj mindst én email-adresse." }
+                ["entries"] = new[] { "Tilføj mindst ét navn eller én email-adresse." }
             });
 
         if (req.Entries.Count > MaxInviteesPerBulkAdd)
             return Results.ValidationProblem(new Dictionary<string, string[]>
             {
-                ["entries"] = new[] { $"Du kan højst tilføje {MaxInviteesPerBulkAdd} adresser ad gangen." }
+                ["entries"] = new[] { $"Du kan højst tilføje {MaxInviteesPerBulkAdd} gæster ad gangen." }
             });
 
         var ev = await db.Events.FirstOrDefaultAsync(x => x.AdminToken == adminToken);
