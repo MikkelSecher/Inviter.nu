@@ -19,7 +19,7 @@ public static class RsvpConfirmationTemplate
         {
             RsvpStatus.Yes => "Du kommer",
             RsvpStatus.No => "Du kommer ikke",
-            RsvpStatus.Maybe => "Du svarede mÃ¥ske",
+            RsvpStatus.Maybe => "Du svarede måske",
             _ => "Dit svar er registreret"
         };
 
@@ -38,14 +38,14 @@ public static class RsvpConfirmationTemplate
       <h1 style="font-family: Georgia, 'Times New Roman', serif; font-size: 24px; margin: 0 0 16px;">Tak for dit svar</h1>
       <p style="margin: 0 0 16px; line-height: 1.5;">Hej {guestName},</p>
       <p style="margin: 0 0 16px; line-height: 1.5;">Vi har modtaget dit svar til "<strong>{title}</strong>": <strong>{statusLabel}</strong>.</p>
-      <p style="margin: 0 0 8px; line-height: 1.5;"><strong>HvornÃ¥r:</strong> {WebUtility.HtmlEncode(startsLocal)}</p>
+      <p style="margin: 0 0 8px; line-height: 1.5;"><strong>Hvornår:</strong> {WebUtility.HtmlEncode(startsLocal)}</p>
       {locationLine}
-      <p style="margin: 16px 0 24px; line-height: 1.5;">Du kan Ã¦ndre dit svar nÃ¥r som helst ved at Ã¥bne invitationen igen:</p>
+      <p style="margin: 16px 0 24px; line-height: 1.5;">Du kan ændre dit svar når som helst ved at åbne invitationen igen:</p>
       <p style="margin: 0 0 24px;">
-        <a href="{inviteUrl}" style="display: inline-block; background: #6b1f2c; color: #fdf8f3; padding: 12px 20px; border-radius: 8px; text-decoration: none; font-weight: 500;">Ã…bn invitation</a>
+        <a href="{inviteUrl}" style="display: inline-block; background: #6b1f2c; color: #fdf8f3; padding: 12px 20px; border-radius: 8px; text-decoration: none; font-weight: 500;">Åbn invitation</a>
       </p>
       <hr style="border: none; border-top: 1px solid #e8dccd; margin: 24px 0;">
-      <p style="margin: 0; font-size: 13px; color: #8a6e6e; line-height: 1.5;">Dette er en automatisk bekrÃ¦ftelse. Du modtager den fordi du svarede pÃ¥ en invitation til {title}.</p>
+      <p style="margin: 0; font-size: 13px; color: #8a6e6e; line-height: 1.5;">Dette er en automatisk bekræftelse. Du modtager den fordi du svarede på en invitation til {title}.</p>
     </td></tr>
   </table>
 </body>
@@ -59,9 +59,9 @@ Hej {rsvp.GuestName},
 
 Vi har modtaget dit svar til "{ev.Title}": {statusLabel}.
 
-HvornÃ¥r: {startsLocal}
+Hvornår: {startsLocal}
 {textLocationLine}
-Du kan Ã¦ndre dit svar nÃ¥r som helst:
+Du kan ændre dit svar når som helst:
 {inviteUrl}
 """;
 

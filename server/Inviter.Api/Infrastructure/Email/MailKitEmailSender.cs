@@ -21,7 +21,7 @@ public class MailKitEmailSender : IEmailSender
         var opt = _options.CurrentValue;
         if (!opt.IsConfigured)
         {
-            _log.LogWarning("SMTP not configured (Email:SmtpHost is empty) â€” dropping {Kind} to {To}", message.Kind, message.ToAddress);
+            _log.LogWarning("SMTP not configured (Email:SmtpHost is empty) - dropping {Kind} to {To}", message.Kind, message.ToAddress);
             return;
         }
 
@@ -49,6 +49,7 @@ public class MailKitEmailSender : IEmailSender
         }
 
         mime.Body = body.ToMessageBody();
+        SetUtf8Charset(mime.Body);
 
         using var client = new SmtpClient();
         var secureSocketOptions = opt.UseStartTls ? SecureSocketOptions.StartTls : SecureSocketOptions.None;
@@ -59,5 +60,22 @@ public class MailKitEmailSender : IEmailSender
         }
         await client.SendAsync(mime, ct);
         await client.DisconnectAsync(true, ct);
+    }
+
+    private static void SetUtf8Charset(MimeEntity entity)
+    {
+        if (entity is TextPart textPart)
+        {
+            textPart.ContentType.Charset = "utf-8";
+            return;
+        }
+
+        if (entity is Multipart multipart)
+        {
+            foreach (var part in multipart)
+            {
+                SetUtf8Charset(part);
+            }
+        }
     }
 }

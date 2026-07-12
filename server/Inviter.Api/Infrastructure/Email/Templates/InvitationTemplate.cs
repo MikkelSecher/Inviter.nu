@@ -25,7 +25,7 @@ public static class InvitationTemplate
             : $"Hej {WebUtility.HtmlEncode(invitee.Name)}";
 
         var subject = isResend
-            ? $"PÃ¥mindelse: Du er inviteret til \"{ev.Title}\""
+            ? $"Påmindelse: Du er inviteret til \"{ev.Title}\""
             : $"Du er inviteret til \"{ev.Title}\"";
 
         var locationLine = location is null
@@ -41,7 +41,7 @@ public static class InvitationTemplate
             : $"<p style=\"margin: 16px 0; line-height: 1.5; white-space: pre-wrap;\">{WebUtility.HtmlEncode(ev.Description)}</p>";
 
         var resendLine = isResend
-            ? "<p style=\"margin: 0 0 16px; line-height: 1.5; color: #8a6e6e; font-size: 14px;\">Du har modtaget denne invitation fÃ¸r â€” vi sender den igen som pÃ¥mindelse.</p>"
+            ? "<p style=\"margin: 0 0 16px; line-height: 1.5; color: #8a6e6e; font-size: 14px;\">Du har modtaget denne invitation før - vi sender den igen som påmindelse.</p>"
             : "";
 
         var organizerSignature = organizer is null
@@ -63,14 +63,14 @@ public static class InvitationTemplate
       <h1 style="font-family: Georgia, 'Times New Roman', serif; font-size: 28px; margin: 0 0 24px; line-height: 1.15;">{title}</h1>
       {resendLine}
       <p style="margin: 0 0 16px; line-height: 1.5;">{greeting},</p>
-      <p style="margin: 0 0 8px; line-height: 1.5;"><strong>HvornÃ¥r:</strong> {WebUtility.HtmlEncode(startsLocal)}</p>
+      <p style="margin: 0 0 8px; line-height: 1.5;"><strong>Hvornår:</strong> {WebUtility.HtmlEncode(startsLocal)}</p>
       {locationLine}
       {deadlineLine}
       {descriptionBlock}
       <p style="margin: 24px 0;">
-        <a href="{inviteUrl}" style="display: inline-block; background: #6b1f2c; color: #fdf8f3; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 500;">Svar pÃ¥ invitationen</a>
+        <a href="{inviteUrl}" style="display: inline-block; background: #6b1f2c; color: #fdf8f3; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 500;">Svar på invitationen</a>
       </p>
-      <p style="margin: 0; font-size: 13px; color: #8a6e6e; line-height: 1.5;">Eller Ã¥bn linket direkte:<br><a href="{inviteUrl}" style="color: #6b1f2c; word-break: break-all;">{inviteUrl}</a></p>
+      <p style="margin: 0; font-size: 13px; color: #8a6e6e; line-height: 1.5;">Eller åbn linket direkte:<br><a href="{inviteUrl}" style="color: #6b1f2c; word-break: break-all;">{inviteUrl}</a></p>
       {organizerSignature}
     </td></tr>
   </table>
@@ -83,7 +83,7 @@ public static class InvitationTemplate
             ? $"Svar senest: {ev.RsvpDeadline.Value.ToLocalTime().ToString("dddd d. MMMM yyyy 'kl.' HH:mm", DanishCulture)}\n"
             : "";
         var textDescription = string.IsNullOrWhiteSpace(ev.Description) ? "" : $"\n{ev.Description}\n";
-        var textResend = isResend ? "(PÃ¥mindelse â€” vi sender invitationen igen)\n\n" : "";
+        var textResend = isResend ? "(Påmindelse - vi sender invitationen igen)\n\n" : "";
         var textSignature = organizer is null ? "" : $"\nHilsen,\n{organizer}\n";
 
         var text = $"""
@@ -91,9 +91,9 @@ public static class InvitationTemplate
 
 Du er inviteret til "{ev.Title}".
 
-HvornÃ¥r: {startsLocal}
+Hvornår: {startsLocal}
 {textLocationLine}{textDeadlineLine}{textDescription}
-Svar pÃ¥ invitationen:
+Svar på invitationen:
 {inviteUrl}
 {textSignature}
 """;

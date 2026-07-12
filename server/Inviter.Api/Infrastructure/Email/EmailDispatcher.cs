@@ -81,7 +81,7 @@ public class EmailDispatcher : BackgroundService
                     message.Kind,
                     message.ToAddress,
                     attempt + 1,
-                    isFinal ? " â€” giving up" : "");
+                    isFinal ? " - giving up" : "");
             }
         }
     }
