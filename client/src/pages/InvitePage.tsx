@@ -16,7 +16,7 @@ import { formatEventTime } from '../lib/format';
 export function InvitePage() {
   const { token = '' } = useParams();
   const [searchParams] = useSearchParams();
-  const inviteeId = searchParams.get('i');
+  const inviteeToken = searchParams.get('g');
   const [event, setEvent] = useState<EventPublic | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [name, setName] = useState('');
@@ -50,14 +50,14 @@ export function InvitePage() {
   }, [token]);
 
   useEffect(() => {
-    if (!token || !inviteeId) return;
+    if (!token || !inviteeToken) return;
     let cancelled = false;
     api
-      .getInviteePrefill(token, inviteeId)
+      .getInviteePrefill(token, inviteeToken)
       .then((prefill) => {
         if (cancelled) return;
         setName((prev) => (prev === '' ? prefill.name ?? '' : prev));
-        setEmail((prev) => (prev === '' ? prefill.email : prev));
+        setEmail((prev) => (prev === '' ? prefill.email ?? '' : prev));
       })
       .catch(() => {
         // Silently ignore unknown invitees; the public form still works.
@@ -65,7 +65,7 @@ export function InvitePage() {
     return () => {
       cancelled = true;
     };
-  }, [token, inviteeId]);
+  }, [token, inviteeToken]);
 
   const closed = useMemo(
     () => (event?.rsvpDeadline ? new Date() > new Date(event.rsvpDeadline) : false),
@@ -109,6 +109,7 @@ export function InvitePage() {
         comment: comment.trim() ? comment.trim() : null,
         email: event.contactRequirement === 'Email' ? email.trim() : null,
         phone: event.contactRequirement === 'Phone' ? phone.trim() : null,
+        inviteeToken,
       });
       setSubmitted(true);
     } catch (err) {

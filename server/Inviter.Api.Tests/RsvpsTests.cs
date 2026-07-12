@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Inviter.Api.Domain;
 using Inviter.Api.Features.Events;
+using Inviter.Api.Features.Invitees;
 using Inviter.Api.Features.Rsvps;
 
 namespace Inviter.Api.Tests;
@@ -17,6 +18,14 @@ public class RsvpsTests : IClassFixture<InviterApiFactory>
     {
         _factory = factory;
         _client = factory.CreateClient();
+    }
+
+    private async Task<AddInviteesResponse> AddInviteesAsync(string adminToken, params (string? email, string? name)[] entries)
+    {
+        var req = new AddInviteesRequest(entries.Select(e => new AddInviteeEntry(e.email, e.name)).ToList());
+        var resp = await _client.PostAsJsonAsync($"/api/manage/{adminToken}/invitees", req, TestJson.Options);
+        resp.EnsureSuccessStatusCode();
+        return (await resp.Content.ReadFromJsonAsync<AddInviteesResponse>(TestJson.Options))!;
     }
 
     // ---------- POST /api/invite/{token}/rsvp ----------
@@ -209,6 +218,41 @@ public class RsvpsTests : IClassFixture<InviterApiFactory>
     }
 
     [Fact]
+    public async Task Submit_WithInviteeToken_LinksRsvpWithoutEmail()
+    {
+        var ev = await TestHelpers.CreateEventAsync(_client);
+        var added = await AddInviteesAsync(ev.AdminToken, (null, "Anne"));
+        var invitee = added.Added[0];
+
+        var req = new CreateRsvpRequest("Anne", RsvpStatus.Yes, null,
+            Email: null, Phone: null, InviteeToken: invitee.PersonalInviteToken);
+        var resp = await _client.PostAsJsonAsync(
+            $"/api/invite/{ev.InviteToken}/rsvp", req, TestJson.Options);
+
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var dto = await resp.Content.ReadFromJsonAsync<RsvpDto>(TestJson.Options);
+        Assert.Equal(invitee.Id, dto!.InviteeId);
+        Assert.Equal("Anne", dto.InviteeName);
+    }
+
+    [Fact]
+    public async Task Submit_WithEmail_AutoLinksMatchingInvitee()
+    {
+        var ev = await TestHelpers.CreateEventAsync(_client,
+            contactRequirement: ContactRequirement.Email);
+        var added = await AddInviteesAsync(ev.AdminToken, ("anne@example.com", "Anne"));
+        var req = new CreateRsvpRequest("Anne", RsvpStatus.Yes, null,
+            Email: "ANNE@example.com", Phone: null);
+
+        var resp = await _client.PostAsJsonAsync(
+            $"/api/invite/{ev.InviteToken}/rsvp", req, TestJson.Options);
+
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var dto = await resp.Content.ReadFromJsonAsync<RsvpDto>(TestJson.Options);
+        Assert.Equal(added.Added[0].Id, dto!.InviteeId);
+    }
+
+    [Fact]
     public async Task Submit_UnknownInviteToken_Returns404()
     {
         var req = new CreateRsvpRequest("Anne", RsvpStatus.Yes, null, null, null);
@@ -234,6 +278,38 @@ public class RsvpsTests : IClassFixture<InviterApiFactory>
         var refreshed = await _client.GetFromJsonAsync<EventAdminDto>(
             $"/api/manage/{ev.AdminToken}", TestJson.Options);
         Assert.Empty(refreshed!.Rsvps);
+    }
+
+    [Fact]
+    public async Task LinkInvitee_Happy_CanLinkAndUnlink()
+    {
+        var ev = await TestHelpers.CreateEventAsync(_client);
+        var added = await AddInviteesAsync(ev.AdminToken, (null, "Anne"));
+        var submit = await _client.PostAsJsonAsync(
+            $"/api/invite/{ev.InviteToken}/rsvp",
+            new CreateRsvpRequest("Anne", RsvpStatus.Yes, null, null, null),
+            TestJson.Options);
+        var rsvp = await submit.Content.ReadFromJsonAsync<RsvpDto>(TestJson.Options);
+
+        var link = await _client.PutAsJsonAsync(
+            $"/api/manage/{ev.AdminToken}/rsvp/{rsvp!.Id}/invitee",
+            new LinkRsvpInviteeRequest(added.Added[0].Id),
+            TestJson.Options);
+        Assert.Equal(HttpStatusCode.NoContent, link.StatusCode);
+
+        var linked = await _client.GetFromJsonAsync<EventAdminDto>(
+            $"/api/manage/{ev.AdminToken}", TestJson.Options);
+        Assert.Equal(added.Added[0].Id, linked!.Rsvps.Single().InviteeId);
+
+        var unlink = await _client.PutAsJsonAsync(
+            $"/api/manage/{ev.AdminToken}/rsvp/{rsvp.Id}/invitee",
+            new LinkRsvpInviteeRequest(null),
+            TestJson.Options);
+        Assert.Equal(HttpStatusCode.NoContent, unlink.StatusCode);
+
+        var unlinked = await _client.GetFromJsonAsync<EventAdminDto>(
+            $"/api/manage/{ev.AdminToken}", TestJson.Options);
+        Assert.Null(unlinked!.Rsvps.Single().InviteeId);
     }
 
     [Fact]

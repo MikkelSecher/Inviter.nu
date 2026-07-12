@@ -7,6 +7,7 @@ public static class RsvpEndpoints
         var api = routes.MapGroup("/api");
 
         api.MapPost("/invite/{inviteToken}/rsvp", SubmitRsvp.Handle);
+        api.MapPut("/manage/{adminToken}/rsvp/{rsvpId:guid}/invitee", LinkRsvpInvitee.Handle);
         api.MapDelete("/manage/{adminToken}/rsvp/{rsvpId:guid}", DeleteRsvp.Handle);
     }
 }

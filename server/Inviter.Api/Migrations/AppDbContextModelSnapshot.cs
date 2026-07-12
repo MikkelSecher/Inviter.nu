@@ -121,7 +121,6 @@ namespace Inviter.Api.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Email")
-                        .IsRequired()
                         .HasMaxLength(320)
                         .HasColumnType("TEXT");
 
@@ -135,12 +134,20 @@ namespace Inviter.Api.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("PersonalInviteToken")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("SendCount")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
                     b.HasIndex("EventId", "Email")
+                        .IsUnique();
+
+                    b.HasIndex("EventId", "PersonalInviteToken")
                         .IsUnique();
 
                     b.ToTable("Invitees");
@@ -168,6 +175,9 @@ namespace Inviter.Api.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("InviteeId")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Phone")
                         .HasMaxLength(50)
                         .HasColumnType("TEXT");
@@ -181,6 +191,8 @@ namespace Inviter.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("EventId");
+
+                    b.HasIndex("InviteeId");
 
                     b.ToTable("Rsvps");
                 });
@@ -204,7 +216,14 @@ namespace Inviter.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Inviter.Api.Domain.Invitee", "Invitee")
+                        .WithMany("Rsvps")
+                        .HasForeignKey("InviteeId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Event");
+
+                    b.Navigation("Invitee");
                 });
 
             modelBuilder.Entity("Inviter.Api.Domain.Event", b =>

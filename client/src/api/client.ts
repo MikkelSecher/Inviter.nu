@@ -13,6 +13,7 @@ import type {
   Rsvp,
   SendInvitationsInput,
   SendInvitationsResponse,
+  UpdateInviteeInput,
   UploadEventImageResponse,
 } from './types';
 
@@ -56,9 +57,9 @@ export const api = {
   getInvite: (inviteToken: string) =>
     request<EventPublic>(`/api/invite/${encodeURIComponent(inviteToken)}`),
 
-  getInviteePrefill: (inviteToken: string, inviteeId: string) =>
+  getInviteePrefill: (inviteToken: string, inviteeToken: string) =>
     request<InviteePrefill>(
-      `/api/invite/${encodeURIComponent(inviteToken)}/invitee/${encodeURIComponent(inviteeId)}`,
+      `/api/invite/${encodeURIComponent(inviteToken)}/guest/${encodeURIComponent(inviteeToken)}`,
     ),
 
   submitRsvp: (inviteToken: string, input: CreateRsvpInput) =>
@@ -107,6 +108,12 @@ export const api = {
       { method: 'DELETE' },
     ),
 
+  linkRsvpInvitee: (adminToken: string, rsvpId: string, inviteeId: string | null) =>
+    request<void>(
+      `/api/manage/${encodeURIComponent(adminToken)}/rsvp/${encodeURIComponent(rsvpId)}/invitee`,
+      { method: 'PUT', body: JSON.stringify({ inviteeId }) },
+    ),
+
   listInvitees: (adminToken: string) =>
     request<Invitee[]>(`/api/manage/${encodeURIComponent(adminToken)}/invitees`),
 
@@ -114,6 +121,12 @@ export const api = {
     request<AddInviteesResponse>(
       `/api/manage/${encodeURIComponent(adminToken)}/invitees`,
       { method: 'POST', body: JSON.stringify({ entries }) },
+    ),
+
+  updateInvitee: (adminToken: string, inviteeId: string, input: UpdateInviteeInput) =>
+    request<Invitee>(
+      `/api/manage/${encodeURIComponent(adminToken)}/invitees/${encodeURIComponent(inviteeId)}`,
+      { method: 'PUT', body: JSON.stringify(input) },
     ),
 
   deleteInvitee: (adminToken: string, inviteeId: string) =>

@@ -10,12 +10,23 @@ public static class GetEventAdmin
     {
         var ev = await db.Events.AsNoTracking()
             .Include(x => x.Rsvps)
+                .ThenInclude(r => r.Invitee)
             .FirstOrDefaultAsync(x => x.AdminToken == adminToken);
         if (ev is null) return Results.NotFound();
 
         var rsvps = ev.Rsvps
             .OrderBy(r => r.SubmittedAt)
-            .Select(r => new RsvpDto(r.Id, r.GuestName, r.Status, r.Comment, r.Email, r.Phone, r.SubmittedAt))
+            .Select(r => new RsvpDto(
+                r.Id,
+                r.InviteeId,
+                r.Invitee?.Name,
+                r.Invitee?.Email,
+                r.GuestName,
+                r.Status,
+                r.Comment,
+                r.Email,
+                r.Phone,
+                r.SubmittedAt))
             .ToList();
 
         return Results.Ok(new EventAdminDto(

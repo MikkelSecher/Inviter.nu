@@ -2,9 +2,9 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
-import { CalendarClock, Sparkles, X } from 'lucide-react';
+import { CalendarClock, Plus, Sparkles, X } from 'lucide-react';
 import { api, ApiError } from '../api/client';
-import type { ContactRequirement } from '../api/types';
+import type { AddInviteeEntry, ContactRequirement } from '../api/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,19 @@ import { DateTimePicker } from '@/components/DateTimePicker';
 import { ImageDropZone } from '@/components/ImageDropZone';
 import { fromDatetimeLocalValue } from '../lib/format';
 import { rememberEvent } from '../lib/myEvents';
+
+type GuestDraft = { rowId: string; name: string; email: string };
+
+function newGuestDraft(seed: Partial<Omit<GuestDraft, 'rowId'>> = {}): GuestDraft {
+  return {
+    rowId:
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : Math.random().toString(36).slice(2),
+    name: seed.name ?? '',
+    email: seed.email ?? '',
+  };
+}
 
 export function CreateEventPage() {
   const navigate = useNavigate();
@@ -32,6 +45,7 @@ export function CreateEventPage() {
   const [organizerEmail, setOrganizerEmail] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [guestDrafts, setGuestDrafts] = useState<GuestDraft[]>(() => [newGuestDraft()]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,6 +59,21 @@ export function CreateEventPage() {
     if (imagePreview) URL.revokeObjectURL(imagePreview);
     setImageFile(null);
     setImagePreview(null);
+  }
+
+  function updateGuestDraft(rowId: string, field: 'name' | 'email', value: string) {
+    setGuestDrafts((prev) => prev.map((d) => (d.rowId === rowId ? { ...d, [field]: value } : d)));
+  }
+
+  function addGuestRow() {
+    setGuestDrafts((prev) => [...prev, newGuestDraft()]);
+  }
+
+  function removeGuestRow(rowId: string) {
+    setGuestDrafts((prev) => {
+      const next = prev.filter((d) => d.rowId !== rowId);
+      return next.length === 0 ? [newGuestDraft()] : next;
+    });
   }
 
   async function onSubmit(e: FormEvent) {
@@ -81,6 +110,21 @@ export function CreateEventPage() {
         adminToken: created.adminToken,
         createdAt: created.createdAt,
       });
+      const guests: AddInviteeEntry[] = guestDrafts
+        .map((d) => ({ name: d.name.trim() || null, email: d.email.trim() || null }))
+        .filter((entry) => Boolean(entry.name || entry.email));
+      if (guests.length > 0) {
+        try {
+          const added = await api.addInvitees(created.adminToken, guests);
+          if (added.skippedDuplicates.length > 0 || added.skippedInvalid.length > 0) {
+            toast.message('Nogle gæster blev sprunget over', {
+              description: 'Du kan rette gæstelisten fra admin-siden.',
+            });
+          }
+        } catch {
+          toast.error('Eventet er oprettet, men gæstelisten kunne ikke gemmes.');
+        }
+      }
       if (imageFile) {
         try {
           await api.uploadEventImage(created.adminToken, imageFile);
@@ -309,6 +353,63 @@ export function CreateEventPage() {
                   autoComplete="email"
                 />
               </Field>
+            </div>
+
+            <div className="border-border/70 space-y-4 rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <Label className="text-sm font-medium">Gæsteliste (valgfri)</Label>
+                <p className="text-muted-foreground text-xs">
+                  Tilføj gæster nu eller senere. Email er valgfri; alle får et personligt link.
+                </p>
+              </div>
+              <div className="hidden grid-cols-[1fr_1.4fr_auto] gap-2 px-1 sm:grid">
+                <div className="text-muted-foreground text-xs">Navn</div>
+                <div className="text-muted-foreground text-xs">Email (valgfri)</div>
+                <div />
+              </div>
+              <div className="space-y-2">
+                {guestDrafts.map((draft) => (
+                  <div
+                    key={draft.rowId}
+                    className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[1fr_1.4fr_auto]"
+                  >
+                    <Input
+                      value={draft.name}
+                      onChange={(e) => updateGuestDraft(draft.rowId, 'name', e.target.value)}
+                      placeholder="Anne Andersen"
+                      maxLength={200}
+                      autoComplete="off"
+                      className="col-span-2 sm:col-span-1"
+                    />
+                    <Input
+                      type="email"
+                      value={draft.email}
+                      onChange={(e) => updateGuestDraft(draft.rowId, 'email', e.target.value)}
+                      placeholder="anne@example.dk"
+                      maxLength={320}
+                      autoComplete="off"
+                      data-1p-ignore
+                      data-lpignore="true"
+                      data-bwignore
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeGuestRow(draft.rowId)}
+                      disabled={guestDrafts.length === 1 && !draft.name && !draft.email}
+                      aria-label="Fjern gæstelinje"
+                      className="text-muted-foreground hover:text-destructive size-8"
+                    >
+                      <X className="size-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <Button type="button" variant="ghost" size="sm" onClick={addGuestRow}>
+                <Plus className="size-4" />
+                Tilføj gæst
+              </Button>
             </div>
 
             <Field

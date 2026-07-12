@@ -22,7 +22,7 @@ public static class SendInvitations
         var ev = await db.Events.FirstOrDefaultAsync(x => x.AdminToken == adminToken, ct);
         if (ev is null) return Results.NotFound();
 
-        var query = db.Invitees.Where(i => i.EventId == ev.Id);
+        var query = db.Invitees.Where(i => i.EventId == ev.Id && i.Email != null);
         if (req.InviteeIds is { Count: > 0 })
         {
             var ids = req.InviteeIds.ToHashSet();

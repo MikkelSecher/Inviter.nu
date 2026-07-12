@@ -46,10 +46,13 @@ public static class SubmitRsvp
         var (contactErrors, email, phone) = ApplyContactRequirement(ev.ContactRequirement, req);
         if (contactErrors is not null) return Results.ValidationProblem(contactErrors);
 
+        var invitee = await ResolveInviteeAsync(ev.Id, req, email, db);
+
         var rsvp = new Rsvp
         {
             Id = Guid.NewGuid(),
             EventId = ev.Id,
+            InviteeId = invitee?.Id,
             GuestName = req.GuestName.Trim(),
             Status = req.Status,
             Comment = string.IsNullOrWhiteSpace(req.Comment) ? null : req.Comment.Trim(),
@@ -71,8 +74,35 @@ public static class SubmitRsvp
         }
 
         return Results.Ok(new RsvpDto(
-            rsvp.Id, rsvp.GuestName, rsvp.Status, rsvp.Comment,
+            rsvp.Id, rsvp.InviteeId, invitee?.Name, invitee?.Email,
+            rsvp.GuestName, rsvp.Status, rsvp.Comment,
             rsvp.Email, rsvp.Phone, rsvp.SubmittedAt));
+    }
+
+    private static async Task<Invitee?> ResolveInviteeAsync(
+        Guid eventId,
+        CreateRsvpRequest req,
+        string? normalizedEmail,
+        AppDbContext db)
+    {
+        var inviteeToken = req.InviteeToken?.Trim();
+        if (!string.IsNullOrEmpty(inviteeToken))
+        {
+            var byToken = await db.Invitees.AsNoTracking()
+                .FirstOrDefaultAsync(i => i.EventId == eventId && i.PersonalInviteToken == inviteeToken);
+            if (byToken is not null) return byToken;
+        }
+
+        if (!string.IsNullOrEmpty(normalizedEmail))
+        {
+            var key = normalizedEmail.ToLowerInvariant();
+            return await db.Invitees.AsNoTracking()
+                .FirstOrDefaultAsync(i => i.EventId == eventId
+                    && i.Email != null
+                    && i.Email.ToLower() == key);
+        }
+
+        return null;
     }
 
     private static (Dictionary<string, string[]>? errors, string? email, string? phone) ApplyContactRequirement(

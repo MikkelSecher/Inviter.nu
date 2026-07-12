@@ -4,18 +4,19 @@ namespace Inviter.Api.Features.Invitees;
 
 public record InviteeDto(
     Guid Id,
-    string Email,
+    string PersonalInviteToken,
+    string? Email,
     string? Name,
     DateTime AddedAt,
     DateTime? LastSentAt,
     int SendCount,
     RsvpStatus? RsvpStatus);
 
-public record InviteePrefillDto(string? Name, string Email);
+public record InviteePrefillDto(string? Name, string? Email);
 
 public record AddInviteesRequest(IReadOnlyList<AddInviteeEntry> Entries);
 
-public record AddInviteeEntry(string Email, string? Name);
+public record AddInviteeEntry(string? Email, string? Name);
 
 public record AddInviteesResponse(
     IReadOnlyList<InviteeDto> Added,
@@ -27,3 +28,5 @@ public record SendInvitationsRequest(
     bool OnlyUnsent);
 
 public record SendInvitationsResponse(int Enqueued);
+
+public record UpdateInviteeRequest(string? Email, string? Name);

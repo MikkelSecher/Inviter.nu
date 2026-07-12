@@ -17,15 +17,29 @@ public static class ListInvitees
             .OrderBy(i => i.AddedAt)
             .ToListAsync();
 
-        var rsvpStatusByEmail = await db.Rsvps.AsNoTracking()
-            .Where(r => r.EventId == ev.Id && r.Email != null)
-            .GroupBy(r => r.Email!)
-            .Select(g => new { Email = g.Key, Status = g.OrderByDescending(r => r.SubmittedAt).Select(r => r.Status).First() })
-            .ToDictionaryAsync(x => x.Email!.ToLowerInvariant(), x => (RsvpStatus?)x.Status);
+        var rsvps = await db.Rsvps.AsNoTracking()
+            .Where(r => r.EventId == ev.Id)
+            .Select(r => new { r.InviteeId, r.Email, r.Status, r.SubmittedAt })
+            .ToListAsync();
+
+        var rsvpStatusByInviteeId = rsvps
+            .Where(r => r.InviteeId.HasValue)
+            .GroupBy(r => r.InviteeId!.Value)
+            .ToDictionary(
+                g => g.Key,
+                g => (RsvpStatus?)g.OrderByDescending(r => r.SubmittedAt).First().Status);
+
+        var rsvpStatusByEmail = rsvps
+            .Where(r => r.Email is not null)
+            .GroupBy(r => r.Email!.ToLowerInvariant())
+            .ToDictionary(
+                g => g.Key,
+                g => (RsvpStatus?)g.OrderByDescending(r => r.SubmittedAt).First().Status);
 
         var dtos = invitees.Select(i => new InviteeDto(
-            i.Id, i.Email, i.Name, i.AddedAt, i.LastSentAt, i.SendCount,
-            rsvpStatusByEmail.GetValueOrDefault(i.Email.ToLowerInvariant()))).ToList();
+            i.Id, i.PersonalInviteToken, i.Email, i.Name, i.AddedAt, i.LastSentAt, i.SendCount,
+            rsvpStatusByInviteeId.GetValueOrDefault(i.Id)
+                ?? (i.Email is null ? null : rsvpStatusByEmail.GetValueOrDefault(i.Email.ToLowerInvariant())))).ToList();
 
         return Results.Ok(dtos);
     }

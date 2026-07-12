@@ -6,6 +6,7 @@ import {
   Calendar,
   CalendarClock,
   Copy,
+  Link2,
   Mail,
   MapPin,
   Pencil,
@@ -13,6 +14,7 @@ import {
   Plus,
   Send,
   Trash2,
+  Unlink,
   UserPlus,
   Users,
   X,
@@ -23,6 +25,7 @@ import type {
   ContactRequirement,
   EventAdmin,
   Invitee,
+  Rsvp,
   RsvpStatus,
 } from '../api/types';
 import { Button } from '@/components/ui/button';
@@ -43,6 +46,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Field } from '@/components/Field';
 import { DateTimePicker } from '@/components/DateTimePicker';
 import { ImageDropZone } from '@/components/ImageDropZone';
@@ -57,6 +68,11 @@ export function ManagePage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [pendingRemoval, setPendingRemoval] = useState<{ id: string; name: string } | null>(null);
+  const [linkingRsvp, setLinkingRsvp] = useState<Rsvp | null>(null);
+  const [linkInvitees, setLinkInvitees] = useState<Invitee[] | null>(null);
+  const [selectedLinkInviteeId, setSelectedLinkInviteeId] = useState('');
+  const [linkBusy, setLinkBusy] = useState(false);
+  const [linkLoadError, setLinkLoadError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoadError(null);
@@ -126,6 +142,33 @@ export function ManagePage() {
       toast.success('Gæst fjernet');
     } catch {
       toast.error('Kunne ikke fjerne gæsten');
+    }
+  }
+
+  async function openLinkDialog(rsvp: Rsvp) {
+    setLinkingRsvp(rsvp);
+    setSelectedLinkInviteeId(rsvp.inviteeId ?? '');
+    setLinkLoadError(null);
+    setLinkInvitees(null);
+    try {
+      setLinkInvitees(await api.listInvitees(token));
+    } catch (err) {
+      setLinkLoadError(err instanceof ApiError ? err.message : 'Kunne ikke hente gæstelisten.');
+    }
+  }
+
+  async function saveRsvpLink() {
+    if (!linkingRsvp) return;
+    setLinkBusy(true);
+    try {
+      await api.linkRsvpInvitee(token, linkingRsvp.id, selectedLinkInviteeId || null);
+      setLinkingRsvp(null);
+      await load();
+      toast.success(selectedLinkInviteeId ? 'Svar knyttet til gæst' : 'Kobling fjernet');
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Kunne ikke gemme koblingen.');
+    } finally {
+      setLinkBusy(false);
     }
   }
 
@@ -247,7 +290,7 @@ export function ManagePage() {
         <div className="flex items-center gap-2">
           <Users className="text-muted-foreground size-4" />
           <h2 className="font-serif text-xl tracking-tight">
-            Gæsteliste{' '}
+            Svar{' '}
             <span className="text-muted-foreground text-sm font-normal">
               ({event.rsvps.length})
             </span>
@@ -296,18 +339,40 @@ export function ManagePage() {
                                 email={r.email}
                                 phone={r.phone}
                               />
+                              {r.inviteeId ? (
+                                <div className="text-muted-foreground inline-flex items-center gap-1.5 text-xs">
+                                  <Link2 className="size-3.5" />
+                                  Knyttet til {r.inviteeName || r.inviteeEmail || 'gæst på listen'}
+                                </div>
+                              ) : (
+                                <div className="text-muted-foreground inline-flex items-center gap-1.5 text-xs">
+                                  <Unlink className="size-3.5" />
+                                  Ikke knyttet til gæstelisten
+                                </div>
+                              )}
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-muted-foreground hover:text-destructive size-8"
-                              onClick={() =>
-                                setPendingRemoval({ id: r.id, name: r.guestName })
-                              }
-                              aria-label={`Fjern ${r.guestName}`}
-                            >
-                              <Trash2 className="size-4" />
-                            </Button>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-muted-foreground hover:text-foreground size-8"
+                                onClick={() => openLinkDialog(r)}
+                                aria-label={`${r.inviteeId ? 'Skift' : 'Knyt'} gæst for ${r.guestName}`}
+                              >
+                                <Link2 className="size-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-muted-foreground hover:text-destructive size-8"
+                                onClick={() =>
+                                  setPendingRemoval({ id: r.id, name: r.guestName })
+                                }
+                                aria-label={`Fjern ${r.guestName}`}
+                              >
+                                <Trash2 className="size-4" />
+                              </Button>
+                            </div>
                           </motion.li>
                         ))}
                       </AnimatePresence>
@@ -320,7 +385,58 @@ export function ManagePage() {
         )}
       </div>
 
-      <InviteeSection adminToken={token} eventTitle={event.title} />
+      <InviteeSection
+        key={event.rsvps.map((r) => `${r.id}:${r.inviteeId ?? ''}`).join('|')}
+        adminToken={token}
+        eventTitle={event.title}
+        eventInviteToken={event.inviteToken}
+      />
+
+      <Dialog
+        open={!!linkingRsvp}
+        onOpenChange={(open) => {
+          if (!open) setLinkingRsvp(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Knyt svar til gæst</DialogTitle>
+            <DialogDescription>
+              Vælg den gæst på listen, som dette svar hører til.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="text-sm font-medium">{linkingRsvp?.guestName}</div>
+            {linkLoadError ? (
+              <p className="text-destructive text-sm">{linkLoadError}</p>
+            ) : (
+              <select
+                value={selectedLinkInviteeId}
+                onChange={(e) => setSelectedLinkInviteeId(e.target.value)}
+                disabled={!linkInvitees || linkBusy}
+                className="border-input bg-background ring-offset-background focus-visible:ring-ring w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
+              >
+                <option value="">Ingen kobling</option>
+                {(linkInvitees ?? []).map((invitee) => (
+                  <option key={invitee.id} value={invitee.id}>
+                    {inviteeLabel(invitee)}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="secondary" onClick={() => setLinkingRsvp(null)}>
+              Annullér
+            </Button>
+            <Button type="button" onClick={saveRsvpLink} disabled={linkBusy || !!linkLoadError}>
+              {linkBusy ? 'Gemmer...' : 'Gem kobling'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog
         open={!!pendingRemoval}
@@ -390,6 +506,14 @@ function SummaryTile({ label, value }: { label: string; value: number }) {
       </CardContent>
     </Card>
   );
+}
+
+function inviteeLabel(invitee: Invitee) {
+  return invitee.name || invitee.email || 'Gæst uden navn';
+}
+
+function personalInviteUrl(inviteToken: string, invitee: Invitee) {
+  return `${window.location.origin}/invite/${inviteToken}?g=${invitee.personalInviteToken}`;
 }
 
 function EditForm({
@@ -732,9 +856,11 @@ function formatRelative(iso: string): string {
 function InviteeSection({
   adminToken,
   eventTitle,
+  eventInviteToken,
 }: {
   adminToken: string;
   eventTitle: string;
+  eventInviteToken: string;
 }) {
   const [invitees, setInvitees] = useState<Invitee[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -743,7 +869,14 @@ function InviteeSection({
   const [addError, setAddError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sending, setSending] = useState(false);
-  const [pendingRemoval, setPendingRemoval] = useState<{ id: string; email: string } | null>(null);
+  const [pendingRemoval, setPendingRemoval] = useState<{ id: string; label: string } | null>(null);
+  const [editingInvitee, setEditingInvitee] = useState<{
+    id: string;
+    name: string;
+    email: string;
+  } | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const load = useCallback(async () => {
     setLoadError(null);
@@ -762,7 +895,7 @@ function InviteeSection({
   }, [load]);
 
   const unsentCount = useMemo(
-    () => (invitees ?? []).filter((i) => i.lastSentAt === null).length,
+    () => (invitees ?? []).filter((i) => i.email && i.lastSentAt === null).length,
     [invitees],
   );
 
@@ -817,10 +950,10 @@ function InviteeSection({
     e.preventDefault();
     setAddError(null);
     const entries: AddInviteeEntry[] = drafts
-      .map((d) => ({ name: d.name.trim() || null, email: d.email.trim() }))
-      .filter((entry) => entry.email.length > 0);
+      .map((d) => ({ name: d.name.trim() || null, email: d.email.trim() || null }))
+      .filter((entry) => Boolean(entry.name || entry.email));
     if (entries.length === 0) {
-      setAddError('Tilføj mindst én email-adresse.');
+      setAddError('Tilføj mindst ét navn eller én email-adresse.');
       return;
     }
     setAdding(true);
@@ -871,6 +1004,53 @@ function InviteeSection({
     }
   }
 
+  function startEdit(invitee: Invitee) {
+    setEditError(null);
+    setEditingInvitee({
+      id: invitee.id,
+      name: invitee.name ?? '',
+      email: invitee.email ?? '',
+    });
+  }
+
+  async function saveEdit() {
+    if (!editingInvitee) return;
+    const name = editingInvitee.name.trim();
+    const email = editingInvitee.email.trim();
+    if (!name && !email) {
+      setEditError('Udfyld mindst navn eller email.');
+      return;
+    }
+    setSavingEdit(true);
+    setEditError(null);
+    try {
+      const updated = await api.updateInvitee(adminToken, editingInvitee.id, {
+        name: name || null,
+        email: email || null,
+      });
+      setInvitees((prev) =>
+        (prev ?? []).map((i) =>
+          i.id === updated.id ? { ...updated, rsvpStatus: i.rsvpStatus } : i,
+        ),
+      );
+      setEditingInvitee(null);
+      toast.success('Gæst opdateret');
+    } catch (err) {
+      setEditError(err instanceof ApiError ? err.message : 'Kunne ikke opdatere gæsten.');
+    } finally {
+      setSavingEdit(false);
+    }
+  }
+
+  async function copyPersonalLink(invitee: Invitee) {
+    try {
+      await navigator.clipboard.writeText(personalInviteUrl(eventInviteToken, invitee));
+      toast.success('Personligt invite-link kopieret');
+    } catch {
+      toast.error('Kunne ikke kopiere');
+    }
+  }
+
   async function onSend(filter: 'unsent' | 'selected') {
     if (sending) return;
     const inviteeIds = filter === 'selected' ? Array.from(selectedIds) : null;
@@ -883,7 +1063,8 @@ function InviteeSection({
       });
       if (res.enqueued === 0) {
         toast.message('Ingen at sende til', {
-          description: filter === 'unsent' ? 'Alle har fået invitation.' : 'Vælg mindst én gæst.',
+          description:
+            filter === 'unsent' ? 'Alle med email har fået invitation.' : 'Vælg mindst én gæst med email.',
         });
       } else {
         toast.success(
@@ -1000,7 +1181,7 @@ function InviteeSection({
                     ? `${selectedIds.size} valgt`
                     : unsentCount > 0
                       ? `${unsentCount} har ikke fået invitation endnu`
-                      : 'Alle har fået invitation'}
+                      : 'Alle med email har fået invitation'}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {selectedIds.size > 0 ? (
@@ -1045,43 +1226,121 @@ function InviteeSection({
                           type="checkbox"
                           checked={selected}
                           onChange={() => toggleSelected(inv.id)}
-                          aria-label={`Vælg ${inv.email}`}
+                          disabled={!inv.email}
+                          aria-label={`Vælg ${inviteeLabel(inv)}`}
                           className="border-input text-primary focus-visible:ring-ring/50 mt-1.5 size-4 cursor-pointer rounded border bg-transparent accent-current focus-visible:ring-2"
                         />
-                        <div className="min-w-0 flex-1 space-y-1">
-                          <div className="flex flex-wrap items-baseline gap-x-2">
-                            {inv.name ? (
-                              <span className="text-sm font-medium">{inv.name}</span>
-                            ) : null}
-                            <a
-                              href={`mailto:${inv.email}`}
-                              className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs"
-                            >
-                              <Mail className="size-3" />
-                              {inv.email}
-                            </a>
-                          </div>
-                          <div className="flex flex-wrap items-center gap-2 text-xs">
-                            {inv.lastSentAt ? (
-                              <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5">
-                                Sendt {formatRelative(inv.lastSentAt)}
-                                {inv.sendCount > 1 ? ` · ${inv.sendCount}×` : ''}
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground">Ikke sendt</span>
-                            )}
-                            {inv.rsvpStatus && <StatusBadge status={inv.rsvpStatus} />}
-                          </div>
+                        <div className="min-w-0 flex-1 space-y-2">
+                          {editingInvitee?.id === inv.id ? (
+                            <div className="space-y-2">
+                              <div className="grid gap-2 sm:grid-cols-2">
+                                <Input
+                                  value={editingInvitee.name}
+                                  onChange={(e) =>
+                                    setEditingInvitee((prev) =>
+                                      prev ? { ...prev, name: e.target.value } : prev,
+                                    )
+                                  }
+                                  placeholder="Navn"
+                                  maxLength={200}
+                                />
+                                <Input
+                                  type="email"
+                                  value={editingInvitee.email}
+                                  onChange={(e) =>
+                                    setEditingInvitee((prev) =>
+                                      prev ? { ...prev, email: e.target.value } : prev,
+                                    )
+                                  }
+                                  placeholder="email@example.dk"
+                                  maxLength={320}
+                                />
+                              </div>
+                              {editError && (
+                                <p className="text-destructive text-xs">{editError}</p>
+                              )}
+                              <div className="flex gap-2">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  onClick={saveEdit}
+                                  disabled={savingEdit}
+                                >
+                                  {savingEdit ? 'Gemmer...' : 'Gem'}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => setEditingInvitee(null)}
+                                >
+                                  Annullér
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="flex flex-wrap items-baseline gap-x-2">
+                                <span className="text-sm font-medium">{inviteeLabel(inv)}</span>
+                                {inv.email ? (
+                                  <a
+                                    href={`mailto:${inv.email}`}
+                                    className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs"
+                                  >
+                                    <Mail className="size-3" />
+                                    {inv.email}
+                                  </a>
+                                ) : (
+                                  <span className="text-muted-foreground text-xs">Ingen email</span>
+                                )}
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2 text-xs">
+                                {inv.email ? (
+                                  inv.lastSentAt ? (
+                                    <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5">
+                                      Sendt {formatRelative(inv.lastSentAt)}
+                                      {inv.sendCount > 1 ? ` · ${inv.sendCount}×` : ''}
+                                    </span>
+                                  ) : (
+                                    <span className="text-muted-foreground">Ikke sendt</span>
+                                  )
+                                ) : (
+                                  <span className="text-muted-foreground">Del via personligt link</span>
+                                )}
+                                {inv.rsvpStatus && <StatusBadge status={inv.rsvpStatus} />}
+                              </div>
+                            </>
+                          )}
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-muted-foreground hover:text-destructive size-8"
-                          onClick={() => setPendingRemoval({ id: inv.id, email: inv.email })}
-                          aria-label={`Fjern ${inv.email}`}
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground hover:text-foreground size-8"
+                            onClick={() => copyPersonalLink(inv)}
+                            aria-label={`Kopier personligt invite-link for ${inviteeLabel(inv)}`}
+                          >
+                            <Copy className="size-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground hover:text-foreground size-8"
+                            onClick={() => startEdit(inv)}
+                            aria-label={`Redigér ${inviteeLabel(inv)}`}
+                          >
+                            <Pencil className="size-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground hover:text-destructive size-8"
+                            onClick={() => setPendingRemoval({ id: inv.id, label: inviteeLabel(inv) })}
+                            aria-label={`Fjern ${inviteeLabel(inv)}`}
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
                       </motion.li>
                     );
                   })}
@@ -1101,7 +1360,7 @@ function InviteeSection({
             <AlertDialogTitle>Fjern fra invitationsliste?</AlertDialogTitle>
             <AlertDialogDescription>
               {pendingRemoval
-                ? `${pendingRemoval.email} fjernes fra invitationslisten for "${eventTitle}". Eksisterende svar bevares.`
+                ? `${pendingRemoval.label} fjernes fra invitationslisten for "${eventTitle}". Eksisterende svar bevares.`
                 : ''}
             </AlertDialogDescription>
           </AlertDialogHeader>

@@ -7,13 +7,19 @@ public record CreateRsvpRequest(
     RsvpStatus Status,
     string? Comment,
     string? Email,
-    string? Phone);
+    string? Phone,
+    string? InviteeToken = null);
 
 public record RsvpDto(
     Guid Id,
+    Guid? InviteeId,
+    string? InviteeName,
+    string? InviteeEmail,
     string GuestName,
     RsvpStatus Status,
     string? Comment,
     string? Email,
     string? Phone,
     DateTime SubmittedAt);
+
+public record LinkRsvpInviteeRequest(Guid? InviteeId);

@@ -17,6 +17,9 @@ export interface EventPublic {
 
 export interface Rsvp {
   id: string;
+  inviteeId: string | null;
+  inviteeName: string | null;
+  inviteeEmail: string | null;
   guestName: string;
   status: RsvpStatus;
   comment: string | null;
@@ -78,16 +81,18 @@ export interface CreateRsvpInput {
   comment: string | null;
   email: string | null;
   phone: string | null;
+  inviteeToken: string | null;
 }
 
 export interface InviteePrefill {
   name: string | null;
-  email: string;
+  email: string | null;
 }
 
 export interface Invitee {
   id: string;
-  email: string;
+  personalInviteToken: string;
+  email: string | null;
   name: string | null;
   addedAt: string;
   lastSentAt: string | null;
@@ -96,7 +101,7 @@ export interface Invitee {
 }
 
 export interface AddInviteeEntry {
-  email: string;
+  email: string | null;
   name: string | null;
 }
 
@@ -113,6 +118,11 @@ export interface SendInvitationsInput {
 
 export interface SendInvitationsResponse {
   enqueued: number;
+}
+
+export interface UpdateInviteeInput {
+  email: string | null;
+  name: string | null;
 }
 
 export interface UploadEventImageResponse {

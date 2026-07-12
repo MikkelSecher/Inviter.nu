@@ -4,6 +4,7 @@ public class Rsvp
 {
     public Guid Id { get; set; }
     public Guid EventId { get; set; }
+    public Guid? InviteeId { get; set; }
     public string GuestName { get; set; } = "";
     public RsvpStatus Status { get; set; }
     public string? Comment { get; set; }
@@ -12,4 +13,5 @@ public class Rsvp
     public DateTime SubmittedAt { get; set; }
 
     public Event? Event { get; set; }
+    public Invitee? Invitee { get; set; }
 }

@@ -46,13 +46,20 @@ public class AppDbContext : DbContext
             r.Property(x => x.Email).HasMaxLength(200);
             r.Property(x => x.Phone).HasMaxLength(50);
             r.HasIndex(x => x.EventId);
+            r.HasIndex(x => x.InviteeId);
+            r.HasOne(x => x.Invitee)
+                .WithMany(i => i.Rsvps)
+                .HasForeignKey(x => x.InviteeId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<Invitee>(i =>
         {
-            i.Property(x => x.Email).IsRequired().HasMaxLength(320);
+            i.Property(x => x.PersonalInviteToken).IsRequired().HasMaxLength(64);
+            i.Property(x => x.Email).HasMaxLength(320);
             i.Property(x => x.Name).HasMaxLength(200);
             i.HasIndex(x => new { x.EventId, x.Email }).IsUnique();
+            i.HasIndex(x => new { x.EventId, x.PersonalInviteToken }).IsUnique();
         });
 
         modelBuilder.Entity<EmailLog>(l =>

@@ -15,7 +15,7 @@ public static class InvitationTemplate
         bool isResend,
         InlineAttachment? image = null)
     {
-        var inviteUrl = $"{baseUrl.TrimEnd('/')}/invite/{ev.InviteToken}?i={invitee.Id}";
+        var inviteUrl = $"{baseUrl.TrimEnd('/')}/invite/{ev.InviteToken}?g={invitee.PersonalInviteToken}";
         var title = WebUtility.HtmlEncode(ev.Title);
         var startsLocal = ev.StartsAt.ToLocalTime().ToString("dddd d. MMMM yyyy 'kl.' HH:mm", DanishCulture);
         var location = string.IsNullOrWhiteSpace(ev.Location) ? null : ev.Location;
@@ -99,7 +99,7 @@ Svar pÃ¥ invitationen:
 """;
 
         return new QueuedEmail(
-            ToAddress: invitee.Email,
+            ToAddress: invitee.Email!,
             ToName: invitee.Name,
             Subject: subject,
             HtmlBody: html,

@@ -1,5 +1,6 @@
 using Inviter.Api.Data;
 using Inviter.Api.Domain;
+using Inviter.Api.Infrastructure.Tokens;
 using Inviter.Api.Shared;
 using Microsoft.EntityFrameworkCore;
 
@@ -28,9 +29,12 @@ public static class AddInvitees
 
         var existing = await db.Invitees.AsNoTracking()
             .Where(i => i.EventId == ev.Id)
-            .Select(i => i.Email)
+            .Select(i => new { i.Email, i.PersonalInviteToken })
             .ToListAsync();
-        var existingSet = new HashSet<string>(existing.Select(e => e.ToLowerInvariant()));
+        var existingSet = new HashSet<string>(existing
+            .Where(i => i.Email is not null)
+            .Select(i => i.Email!.ToLowerInvariant()));
+        var tokenSet = new HashSet<string>(existing.Select(i => i.PersonalInviteToken));
         var seenInBatch = new HashSet<string>();
 
         var added = new List<Invitee>();
@@ -41,21 +45,38 @@ public static class AddInvitees
         {
             var email = entry.Email?.Trim();
             var name = string.IsNullOrWhiteSpace(entry.Name) ? null : entry.Name.Trim();
-            if (string.IsNullOrEmpty(email) || email.Length > 320 || !Validation.LooksLikeEmail(email))
+            if (string.IsNullOrEmpty(email)) email = null;
+            if (string.IsNullOrEmpty(email) && string.IsNullOrEmpty(name))
+            {
+                skippedInvalid.Add("");
+                continue;
+            }
+            if (email is not null && (email.Length > 320 || !Validation.LooksLikeEmail(email)))
             {
                 skippedInvalid.Add(entry.Email ?? "");
                 continue;
             }
-            var key = email.ToLowerInvariant();
-            if (existingSet.Contains(key) || !seenInBatch.Add(key))
+            if (email is not null)
             {
-                skippedDuplicates.Add(email);
-                continue;
+                var key = email.ToLowerInvariant();
+                if (existingSet.Contains(key) || !seenInBatch.Add(key))
+                {
+                    skippedDuplicates.Add(email);
+                    continue;
+                }
             }
+
+            string token;
+            do
+            {
+                token = TokenGenerator.NewInviteeToken();
+            } while (!tokenSet.Add(token));
+
             var invitee = new Invitee
             {
                 Id = Guid.NewGuid(),
                 EventId = ev.Id,
+                PersonalInviteToken = token,
                 Email = email,
                 Name = name,
                 AddedAt = DateTime.UtcNow,
@@ -68,7 +89,7 @@ public static class AddInvitees
             await db.SaveChangesAsync();
 
         var dtos = added.Select(i => new InviteeDto(
-            i.Id, i.Email, i.Name, i.AddedAt, i.LastSentAt, i.SendCount, null)).ToList();
+            i.Id, i.PersonalInviteToken, i.Email, i.Name, i.AddedAt, i.LastSentAt, i.SendCount, null)).ToList();
 
         return Results.Ok(new AddInviteesResponse(dtos, skippedDuplicates, skippedInvalid));
     }

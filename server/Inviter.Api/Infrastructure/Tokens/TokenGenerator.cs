@@ -7,6 +7,7 @@ public static class TokenGenerator
     public static string NewInviteToken() => CreateBase64UrlToken(9);
     public static string NewAdminToken() => CreateBase64UrlToken(32);
     public static string NewImageToken() => CreateBase64UrlToken(12);
+    public static string NewInviteeToken() => CreateBase64UrlToken(12);
 
     private static string CreateBase64UrlToken(int byteLength)
     {

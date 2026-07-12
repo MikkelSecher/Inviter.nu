@@ -28,7 +28,7 @@ public class InviteesTests : IClassFixture<InviterApiFactory>
         return (await resp.Content.ReadFromJsonAsync<AddInviteesResponse>(TestJson.Options))!;
     }
 
-    // ---------- GET /api/invite/{token}/invitee/{id} ----------
+    // ---------- GET /api/invite/{token}/guest/{token} ----------
 
     [Fact]
     public async Task Prefill_Happy_ReturnsNameAndEmail()
@@ -37,7 +37,7 @@ public class InviteesTests : IClassFixture<InviterApiFactory>
         var added = await AddAsync(ev.AdminToken, ("anne@example.com", "Anne"));
 
         var resp = await _client.GetAsync(
-            $"/api/invite/{ev.InviteToken}/invitee/{added.Added[0].Id}");
+            $"/api/invite/{ev.InviteToken}/guest/{added.Added[0].PersonalInviteToken}");
 
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
         var dto = await resp.Content.ReadFromJsonAsync<InviteePrefillDto>(TestJson.Options);
@@ -50,7 +50,7 @@ public class InviteesTests : IClassFixture<InviterApiFactory>
     {
         var ev = await TestHelpers.CreateEventAsync(_client);
         var resp = await _client.GetAsync(
-            $"/api/invite/{ev.InviteToken}/invitee/{Guid.NewGuid()}");
+            $"/api/invite/{ev.InviteToken}/guest/no-such-guest");
         Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
     }
 
@@ -59,7 +59,7 @@ public class InviteesTests : IClassFixture<InviterApiFactory>
     {
         var ev = await TestHelpers.CreateEventAsync(_client);
         var added = await AddAsync(ev.AdminToken, ("anne@example.com", null));
-        var resp = await _client.GetAsync($"/api/invite/wrong-token/invitee/{added.Added[0].Id}");
+        var resp = await _client.GetAsync($"/api/invite/wrong-token/guest/{added.Added[0].PersonalInviteToken}");
         Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
     }
 
@@ -109,6 +109,25 @@ public class InviteesTests : IClassFixture<InviterApiFactory>
         Assert.Equal(2, resp.Added.Count);
         Assert.Empty(resp.SkippedDuplicates);
         Assert.Empty(resp.SkippedInvalid);
+        Assert.All(resp.Added, i => Assert.False(string.IsNullOrEmpty(i.PersonalInviteToken)));
+    }
+
+    [Fact]
+    public async Task Add_NameOnlyGuest_GeneratesPersonalInviteToken()
+    {
+        var ev = await TestHelpers.CreateEventAsync(_client);
+        var req = new AddInviteesRequest(new List<AddInviteeEntry>
+            { new(null, "Anne") });
+
+        var resp = await _client.PostAsJsonAsync(
+            $"/api/manage/{ev.AdminToken}/invitees", req, TestJson.Options);
+
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var dto = await resp.Content.ReadFromJsonAsync<AddInviteesResponse>(TestJson.Options);
+        var added = Assert.Single(dto!.Added);
+        Assert.Equal("Anne", added.Name);
+        Assert.Null(added.Email);
+        Assert.False(string.IsNullOrWhiteSpace(added.PersonalInviteToken));
     }
 
     [Fact]
@@ -167,6 +186,42 @@ public class InviteesTests : IClassFixture<InviterApiFactory>
 
         Assert.Single(resp.Added);
         Assert.Equal(2, resp.SkippedInvalid.Count);
+    }
+
+    // ---------- PUT /api/manage/{adminToken}/invitees/{id} ----------
+
+    [Fact]
+    public async Task Update_Happy_ChangesNameAndEmail()
+    {
+        var ev = await TestHelpers.CreateEventAsync(_client);
+        var added = await AddAsync(ev.AdminToken, ("anne@example.com", "Anne"));
+        var id = added.Added[0].Id;
+        var token = added.Added[0].PersonalInviteToken;
+
+        var req = new UpdateInviteeRequest("anne2@example.com", "Anne 2");
+        var resp = await _client.PutAsJsonAsync(
+            $"/api/manage/{ev.AdminToken}/invitees/{id}", req, TestJson.Options);
+
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var dto = await resp.Content.ReadFromJsonAsync<InviteeDto>(TestJson.Options);
+        Assert.Equal("Anne 2", dto!.Name);
+        Assert.Equal("anne2@example.com", dto.Email);
+        Assert.Equal(token, dto.PersonalInviteToken);
+    }
+
+    [Fact]
+    public async Task Update_CanRemoveEmail_WhenNameRemains()
+    {
+        var ev = await TestHelpers.CreateEventAsync(_client);
+        var added = await AddAsync(ev.AdminToken, ("anne@example.com", "Anne"));
+
+        var req = new UpdateInviteeRequest(null, "Anne");
+        var resp = await _client.PutAsJsonAsync(
+            $"/api/manage/{ev.AdminToken}/invitees/{added.Added[0].Id}", req, TestJson.Options);
+
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var dto = await resp.Content.ReadFromJsonAsync<InviteeDto>(TestJson.Options);
+        Assert.Null(dto!.Email);
     }
 
     [Fact]
@@ -241,6 +296,31 @@ public class InviteesTests : IClassFixture<InviterApiFactory>
             Assert.Equal(1, i.SendCount);
             Assert.NotNull(i.LastSentAt);
         });
+    }
+
+    [Fact]
+    public async Task Send_SkipsInviteesWithoutEmail()
+    {
+        var ev = await TestHelpers.CreateEventAsync(_client);
+        var add = new AddInviteesRequest(new List<AddInviteeEntry>
+        {
+            new("a@example.com", "A"),
+            new(null, "No Email"),
+        });
+        var addResp = await _client.PostAsJsonAsync(
+            $"/api/manage/{ev.AdminToken}/invitees", add, TestJson.Options);
+        addResp.EnsureSuccessStatusCode();
+        var emailsBefore = _factory.Emails.Enqueued.Count;
+
+        var req = new SendInvitationsRequest(InviteeIds: null, OnlyUnsent: false);
+        var resp = await _client.PostAsJsonAsync(
+            $"/api/manage/{ev.AdminToken}/invitees/send", req, TestJson.Options);
+
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var dto = await resp.Content.ReadFromJsonAsync<SendInvitationsResponse>(TestJson.Options);
+        Assert.Equal(1, dto!.Enqueued);
+        var sent = _factory.Emails.Enqueued.Skip(emailsBefore).Single();
+        Assert.Equal("a@example.com", sent.ToAddress);
     }
 
     [Fact]
