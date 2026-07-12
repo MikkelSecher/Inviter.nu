@@ -59,7 +59,12 @@ import { DateTimePicker } from '@/components/DateTimePicker';
 import { ImageDropZone } from '@/components/ImageDropZone';
 import { StatusBadge, statusLabel } from '@/components/StatusBadge';
 import { cn } from '@/lib/utils';
-import { formatEventTime, fromDatetimeLocalValue, toDatetimeLocalValue } from '../lib/format';
+import {
+  formatEventTime,
+  formatRsvpTime,
+  fromDatetimeLocalValue,
+  toDatetimeLocalValue,
+} from '../lib/format';
 import { rememberEvent, updateRememberedTitle } from '../lib/myEvents';
 
 export function ManagePage() {
@@ -121,6 +126,7 @@ export function ManagePage() {
     Maybe: event.rsvps.filter((r) => r.status === 'Maybe'),
     No: event.rsvps.filter((r) => r.status === 'No'),
   };
+  const currentRsvpIds = currentRsvpIdsByInvitee(event.rsvps);
   const deadlinePassed = event.rsvpDeadline ? new Date() > new Date(event.rsvpDeadline) : false;
 
   async function copyInvite() {
@@ -318,7 +324,9 @@ export function ManagePage() {
                     </div>
                     <ul className="divide-border divide-y">
                       <AnimatePresence initial={false}>
-                        {list.map((r) => (
+                        {list.map((r) => {
+                          const isCurrent = !r.inviteeId || currentRsvpIds.has(r.id);
+                          return (
                           <motion.li
                             key={r.id}
                             layout
@@ -326,10 +334,27 @@ export function ManagePage() {
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, x: -12, transition: { duration: 0.18 } }}
                             transition={{ duration: 0.22, ease: 'easeOut' }}
-                            className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0"
+                            className={cn(
+                              'flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0',
+                              !isCurrent && 'text-muted-foreground opacity-65',
+                            )}
                           >
-                            <div className="min-w-0 space-y-1">
-                              <div className="text-sm font-medium">{r.guestName}</div>
+                            <div className="min-w-0 space-y-1.5">
+                              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                                <div className="text-sm font-medium">{r.guestName}</div>
+                                {!isCurrent && (
+                                  <span className="border-border bg-muted/60 text-muted-foreground inline-flex h-5 items-center rounded-full border px-2 text-xs font-medium">
+                                    Tidligere svar
+                                  </span>
+                                )}
+                              </div>
+                              <time
+                                dateTime={r.submittedAt}
+                                className="text-muted-foreground inline-flex items-center gap-1.5 text-xs"
+                              >
+                                <CalendarClock className="size-3.5" />
+                                Svarede {formatRsvpTime(r.submittedAt)}
+                              </time>
                               {r.comment && (
                                 <div className="text-muted-foreground text-sm">{r.comment}</div>
                               )}
@@ -373,7 +398,8 @@ export function ManagePage() {
                               </Button>
                             </div>
                           </motion.li>
-                        ))}
+                          );
+                        })}
                       </AnimatePresence>
                     </ul>
                   </CardContent>
@@ -509,6 +535,23 @@ function SummaryTile({ label, value }: { label: string; value: number }) {
 
 function inviteeLabel(invitee: Invitee) {
   return invitee.name || invitee.email || 'Gæst uden navn';
+}
+
+function currentRsvpIdsByInvitee(rsvps: Rsvp[]) {
+  const latestByInvitee = new Map<string, { id: string; submittedAt: number }>();
+
+  for (const rsvp of rsvps) {
+    if (!rsvp.inviteeId) continue;
+
+    const submittedAt = Date.parse(rsvp.submittedAt);
+    const submittedAtValue = Number.isNaN(submittedAt) ? 0 : submittedAt;
+    const current = latestByInvitee.get(rsvp.inviteeId);
+    if (!current || submittedAtValue >= current.submittedAt) {
+      latestByInvitee.set(rsvp.inviteeId, { id: rsvp.id, submittedAt: submittedAtValue });
+    }
+  }
+
+  return new Set(Array.from(latestByInvitee.values(), (rsvp) => rsvp.id));
 }
 
 function personalInviteUrl(inviteToken: string, invitee: Invitee) {
