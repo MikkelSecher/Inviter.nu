@@ -124,11 +124,10 @@ export function ManagePage() {
   const deadlinePassed = event.rsvpDeadline ? new Date() > new Date(event.rsvpDeadline) : false;
 
   async function copyInvite() {
-    try {
-      await navigator.clipboard.writeText(inviteUrl);
+    if (await copyTextToClipboard(inviteUrl)) {
       toast.success('Invite-link kopieret');
-    } catch {
-      toast.error('Kunne ikke kopiere');
+    } else {
+      toast.error('Kunne ikke kopiere invite-linket');
     }
   }
 
@@ -514,6 +513,35 @@ function inviteeLabel(invitee: Invitee) {
 
 function personalInviteUrl(inviteToken: string, invitee: Invitee) {
   return `${window.location.origin}/invite/${inviteToken}?g=${invitee.personalInviteToken}`;
+}
+
+async function copyTextToClipboard(text: string): Promise<boolean> {
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // Fall back for browsers that expose the API but deny write access.
+    }
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.left = '-9999px';
+  textarea.style.top = '0';
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+
+  try {
+    return document.execCommand('copy');
+  } catch {
+    return false;
+  } finally {
+    document.body.removeChild(textarea);
+  }
 }
 
 function EditForm({
@@ -1053,11 +1081,10 @@ function InviteeSection({
   }
 
   async function copyPersonalLink(invitee: Invitee) {
-    try {
-      await navigator.clipboard.writeText(personalInviteUrl(eventInviteToken, invitee));
+    if (await copyTextToClipboard(personalInviteUrl(eventInviteToken, invitee))) {
       toast.success('Personligt invite-link kopieret');
-    } catch {
-      toast.error('Kunne ikke kopiere');
+    } else {
+      toast.error('Kunne ikke kopiere det personlige invite-link');
     }
   }
 
