@@ -15,7 +15,7 @@ public static class GetEventAdmin
         if (ev is null) return Results.NotFound();
 
         var rsvps = ev.Rsvps
-            .OrderBy(r => r.SubmittedAt)
+            .OrderByDescending(r => r.SubmittedAt)
             .Select(r => new RsvpDto(
                 r.Id,
                 r.InviteeId,

@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Inviter.Api.Domain;
 using Inviter.Api.Features.Events;
+using Inviter.Api.Features.Rsvps;
 
 namespace Inviter.Api.Tests;
 
@@ -150,6 +151,34 @@ public class EventsTests : IClassFixture<InviterApiFactory>
         Assert.Equal(created.Id, dto!.Id);
         Assert.Equal(created.AdminToken, dto.AdminToken);
         Assert.Empty(dto.Rsvps);
+    }
+
+    [Fact]
+    public async Task GetByAdminToken_ReturnsRsvpsNewestFirst()
+    {
+        var created = await TestHelpers.CreateEventAsync(_client);
+
+        var first = await _client.PostAsJsonAsync(
+            $"/api/invite/{created.InviteToken}/rsvp",
+            new CreateRsvpRequest("Første gæst", RsvpStatus.Yes, null, null, null),
+            TestJson.Options);
+        first.EnsureSuccessStatusCode();
+
+        await Task.Delay(20);
+
+        var second = await _client.PostAsJsonAsync(
+            $"/api/invite/{created.InviteToken}/rsvp",
+            new CreateRsvpRequest("Anden gæst", RsvpStatus.Yes, null, null, null),
+            TestJson.Options);
+        second.EnsureSuccessStatusCode();
+
+        var dto = await _client.GetFromJsonAsync<EventAdminDto>(
+            $"/api/manage/{created.AdminToken}", TestJson.Options);
+
+        Assert.NotNull(dto);
+        Assert.Collection(dto!.Rsvps,
+            r => Assert.Equal("Anden gæst", r.GuestName),
+            r => Assert.Equal("Første gæst", r.GuestName));
     }
 
     [Fact]
