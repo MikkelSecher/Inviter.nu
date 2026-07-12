@@ -102,6 +102,8 @@ public class InviteesTests : IClassFixture<InviterApiFactory>
     public async Task Add_HappyPath_PersistsAll()
     {
         var ev = await TestHelpers.CreateEventAsync(_client);
+        var emailsBefore = _factory.Emails.Enqueued.Count;
+
         var resp = await AddAsync(ev.AdminToken,
             ("a@example.com", "A"),
             ("b@example.com", null));
@@ -110,6 +112,16 @@ public class InviteesTests : IClassFixture<InviterApiFactory>
         Assert.Empty(resp.SkippedDuplicates);
         Assert.Empty(resp.SkippedInvalid);
         Assert.All(resp.Added, i => Assert.False(string.IsNullOrEmpty(i.PersonalInviteToken)));
+        Assert.All(resp.Added, i =>
+        {
+            Assert.Equal(1, i.SendCount);
+            Assert.NotNull(i.LastSentAt);
+        });
+
+        var sent = _factory.Emails.Enqueued.Skip(emailsBefore).ToList();
+        Assert.Equal(2, sent.Count);
+        Assert.All(sent, e => Assert.Equal("Invitation", e.Kind));
+        Assert.Equal(new[] { "a@example.com", "b@example.com" }, sent.Select(e => e.ToAddress).OrderBy(x => x));
     }
 
     [Fact]
@@ -117,6 +129,7 @@ public class InviteesTests : IClassFixture<InviterApiFactory>
     {
         var ev = await TestHelpers.CreateEventAsync(_client,
             contactRequirement: ContactRequirement.Email);
+        var emailsBefore = _factory.Emails.Enqueued.Count;
         var req = new AddInviteesRequest(new List<AddInviteeEntry>
             { new(null, "Anne") });
 
@@ -129,6 +142,9 @@ public class InviteesTests : IClassFixture<InviterApiFactory>
         Assert.Equal("Anne", added.Name);
         Assert.Null(added.Email);
         Assert.False(string.IsNullOrWhiteSpace(added.PersonalInviteToken));
+        Assert.Null(added.LastSentAt);
+        Assert.Equal(0, added.SendCount);
+        Assert.Equal(emailsBefore, _factory.Emails.Enqueued.Count);
     }
 
     [Fact]
@@ -289,13 +305,13 @@ public class InviteesTests : IClassFixture<InviterApiFactory>
 
         var sent = _factory.Emails.Enqueued.Skip(emailsBefore).ToList();
         Assert.Equal(2, sent.Count);
-        Assert.All(sent, e => Assert.Equal("Invitation", e.Kind));
+        Assert.All(sent, e => Assert.Equal("InvitationResend", e.Kind));
 
         var list = await _client.GetFromJsonAsync<List<InviteeDto>>(
             $"/api/manage/{ev.AdminToken}/invitees", TestJson.Options);
         Assert.All(list!, i =>
         {
-            Assert.Equal(1, i.SendCount);
+            Assert.Equal(2, i.SendCount);
             Assert.NotNull(i.LastSentAt);
         });
     }
@@ -353,9 +369,6 @@ public class InviteesTests : IClassFixture<InviterApiFactory>
     {
         var ev = await TestHelpers.CreateEventAsync(_client);
         await AddAsync(ev.AdminToken, ("a@example.com", null));
-
-        var firstReq = new SendInvitationsRequest(null, OnlyUnsent: false);
-        await _client.PostAsJsonAsync($"/api/manage/{ev.AdminToken}/invitees/send", firstReq, TestJson.Options);
 
         var emailsBefore = _factory.Emails.Enqueued.Count;
 

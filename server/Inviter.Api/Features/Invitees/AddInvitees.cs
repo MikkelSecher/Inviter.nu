@@ -1,8 +1,11 @@
 using Inviter.Api.Data;
 using Inviter.Api.Domain;
+using Inviter.Api.Infrastructure.Email;
+using Inviter.Api.Infrastructure.Images;
 using Inviter.Api.Infrastructure.Tokens;
 using Inviter.Api.Shared;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Inviter.Api.Features.Invitees;
 
@@ -10,7 +13,15 @@ public static class AddInvitees
 {
     private const int MaxInviteesPerBulkAdd = 200;
 
-    public static async Task<IResult> Handle(string adminToken, AddInviteesRequest req, AppDbContext db)
+    public static async Task<IResult> Handle(
+        string adminToken,
+        AddInviteesRequest req,
+        AppDbContext db,
+        IEmailQueue emailQueue,
+        IOptions<AppOptions> appOptions,
+        EventImageStorage imageStorage,
+        ImageProcessor imageProcessor,
+        CancellationToken ct)
     {
         if (req.Entries is null || req.Entries.Count == 0)
             return Results.ValidationProblem(new Dictionary<string, string[]>
@@ -24,13 +35,13 @@ public static class AddInvitees
                 ["entries"] = new[] { $"Du kan højst tilføje {MaxInviteesPerBulkAdd} gæster ad gangen." }
             });
 
-        var ev = await db.Events.FirstOrDefaultAsync(x => x.AdminToken == adminToken);
+        var ev = await db.Events.FirstOrDefaultAsync(x => x.AdminToken == adminToken, ct);
         if (ev is null) return Results.NotFound();
 
         var existing = await db.Invitees.AsNoTracking()
             .Where(i => i.EventId == ev.Id)
             .Select(i => new { i.Email, i.PersonalInviteToken })
-            .ToListAsync();
+            .ToListAsync(ct);
         var existingSet = new HashSet<string>(existing
             .Where(i => i.Email is not null)
             .Select(i => i.Email!.ToLowerInvariant()));
@@ -86,7 +97,19 @@ public static class AddInvitees
         }
 
         if (added.Count > 0)
-            await db.SaveChangesAsync();
+        {
+            await InvitationEmails.EnqueueAsync(
+                ev,
+                added,
+                emailQueue,
+                appOptions.Value.BaseUrl,
+                imageStorage,
+                imageProcessor,
+                DateTime.UtcNow,
+                ct);
+
+            await db.SaveChangesAsync(ct);
+        }
 
         var dtos = added.Select(i => new InviteeDto(
             i.Id, i.PersonalInviteToken, i.Email, i.Name, i.AddedAt, i.LastSentAt, i.SendCount, null)).ToList();
