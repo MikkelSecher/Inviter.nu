@@ -12,5 +12,6 @@ public static class InviteeEndpoints
         api.MapPut("/manage/{adminToken}/invitees/{inviteeId:guid}", UpdateInvitee.Handle);
         api.MapDelete("/manage/{adminToken}/invitees/{inviteeId:guid}", DeleteInvitee.Handle);
         api.MapPost("/manage/{adminToken}/invitees/send", SendInvitations.Handle);
+        api.MapPost("/manage/{adminToken}/invitees/message", SendGuestMessage.Handle);
     }
 }

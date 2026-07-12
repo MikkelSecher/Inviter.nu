@@ -12,6 +12,8 @@ import type {
   MetricsPeriod,
   MetricsSnapshot,
   Rsvp,
+  SendGuestMessageInput,
+  SendGuestMessageResponse,
   SendInvitationsInput,
   SendInvitationsResponse,
   UpdateInviteeInput,
@@ -142,6 +144,12 @@ export const api = {
   sendInvitations: (adminToken: string, input: SendInvitationsInput) =>
     request<SendInvitationsResponse>(
       `/api/manage/${encodeURIComponent(adminToken)}/invitees/send`,
+      { method: 'POST', body: JSON.stringify(input) },
+    ),
+
+  sendGuestMessage: (adminToken: string, input: SendGuestMessageInput) =>
+    request<SendGuestMessageResponse>(
+      `/api/manage/${encodeURIComponent(adminToken)}/invitees/message`,
       { method: 'POST', body: JSON.stringify(input) },
     ),
 

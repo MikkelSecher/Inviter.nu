@@ -50,4 +50,18 @@ public record SendInvitationsRequest(
 
 public record SendInvitationsResponse(int Enqueued);
 
+public enum GuestMessageAudience
+{
+    All,
+    Yes,
+    No
+}
+
+public record SendGuestMessageRequest(
+    GuestMessageAudience Audience,
+    string Subject,
+    string Message);
+
+public record SendGuestMessageResponse(int Enqueued);
+
 public record UpdateInviteeRequest(string? Email, string? Name);

@@ -481,6 +481,159 @@ public class InviteesTests : IClassFixture<InviterApiFactory>
         Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
     }
 
+    // ---------- POST /api/manage/{adminToken}/invitees/message ----------
+
+    [Fact]
+    public async Task SendMessage_All_EnqueuesForInviteesAndRsvpEmails()
+    {
+        var ev = await TestHelpers.CreateEventAsync(_client,
+            contactRequirement: ContactRequirement.Email);
+        await AddAsync(ev.AdminToken, ("anne@example.com", "Anne"));
+
+        var rsvp = new CreateRsvpRequest("Bo", RsvpStatus.Yes, null, "bo@example.com", null);
+        var rsvpResp = await _client.PostAsJsonAsync(
+            $"/api/invite/{ev.InviteToken}/rsvp", rsvp, TestJson.Options);
+        rsvpResp.EnsureSuccessStatusCode();
+        var emailsBefore = _factory.Emails.Enqueued.Count;
+
+        var req = new SendGuestMessageRequest(
+            GuestMessageAudience.All,
+            "Praktisk info",
+            "Vi starter kl. 18.");
+        var resp = await _client.PostAsJsonAsync(
+            $"/api/manage/{ev.AdminToken}/invitees/message", req, TestJson.Options);
+
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var dto = await resp.Content.ReadFromJsonAsync<SendGuestMessageResponse>(TestJson.Options);
+        Assert.Equal(2, dto!.Enqueued);
+
+        var sent = _factory.Emails.Enqueued.Skip(emailsBefore).ToList();
+        Assert.Equal(new[] { "anne@example.com", "bo@example.com" },
+            sent.Select(e => e.ToAddress).OrderBy(x => x).ToArray());
+        Assert.All(sent, e =>
+        {
+            Assert.Equal("GuestMessage", e.Kind);
+            Assert.Equal("Praktisk info", e.Subject);
+            Assert.Contains("Vi starter kl. 18.", e.TextBody);
+        });
+    }
+
+    [Fact]
+    public async Task SendMessage_Yes_UsesLatestRsvpStatus()
+    {
+        var ev = await TestHelpers.CreateEventAsync(_client,
+            contactRequirement: ContactRequirement.Email);
+        var added = await AddAsync(ev.AdminToken,
+            ("anne@example.com", "Anne"),
+            ("bo@example.com", "Bo"));
+
+        var first = new CreateRsvpRequest(
+            "Anne",
+            RsvpStatus.No,
+            null,
+            "anne@example.com",
+            null,
+            added.Added[0].PersonalInviteToken);
+        var firstResp = await _client.PostAsJsonAsync(
+            $"/api/invite/{ev.InviteToken}/rsvp", first, TestJson.Options);
+        firstResp.EnsureSuccessStatusCode();
+
+        await Task.Delay(5);
+
+        var latest = new CreateRsvpRequest(
+            "Anne",
+            RsvpStatus.Yes,
+            null,
+            "anne@example.com",
+            null,
+            added.Added[0].PersonalInviteToken);
+        var latestResp = await _client.PostAsJsonAsync(
+            $"/api/invite/{ev.InviteToken}/rsvp", latest, TestJson.Options);
+        latestResp.EnsureSuccessStatusCode();
+
+        var bo = new CreateRsvpRequest(
+            "Bo",
+            RsvpStatus.No,
+            null,
+            "bo@example.com",
+            null,
+            added.Added[1].PersonalInviteToken);
+        var boResp = await _client.PostAsJsonAsync(
+            $"/api/invite/{ev.InviteToken}/rsvp", bo, TestJson.Options);
+        boResp.EnsureSuccessStatusCode();
+        var emailsBefore = _factory.Emails.Enqueued.Count;
+
+        var req = new SendGuestMessageRequest(
+            GuestMessageAudience.Yes,
+            "Til jer der kommer",
+            "Vi glæder os.");
+        var resp = await _client.PostAsJsonAsync(
+            $"/api/manage/{ev.AdminToken}/invitees/message", req, TestJson.Options);
+
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var dto = await resp.Content.ReadFromJsonAsync<SendGuestMessageResponse>(TestJson.Options);
+        Assert.Equal(1, dto!.Enqueued);
+
+        var sent = _factory.Emails.Enqueued.Skip(emailsBefore).Single();
+        Assert.Equal("anne@example.com", sent.ToAddress);
+    }
+
+    [Fact]
+    public async Task SendMessage_No_IncludesUnlinkedRsvpEmail()
+    {
+        var ev = await TestHelpers.CreateEventAsync(_client,
+            contactRequirement: ContactRequirement.Email);
+
+        var no = new CreateRsvpRequest("Nora", RsvpStatus.No, null, "nora@example.com", null);
+        var noResp = await _client.PostAsJsonAsync(
+            $"/api/invite/{ev.InviteToken}/rsvp", no, TestJson.Options);
+        noResp.EnsureSuccessStatusCode();
+
+        var yes = new CreateRsvpRequest("Yasmin", RsvpStatus.Yes, null, "yasmin@example.com", null);
+        var yesResp = await _client.PostAsJsonAsync(
+            $"/api/invite/{ev.InviteToken}/rsvp", yes, TestJson.Options);
+        yesResp.EnsureSuccessStatusCode();
+        var emailsBefore = _factory.Emails.Enqueued.Count;
+
+        var req = new SendGuestMessageRequest(
+            GuestMessageAudience.No,
+            "Tak for svar",
+            "Tak fordi du gav besked.");
+        var resp = await _client.PostAsJsonAsync(
+            $"/api/manage/{ev.AdminToken}/invitees/message", req, TestJson.Options);
+
+        Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+        var dto = await resp.Content.ReadFromJsonAsync<SendGuestMessageResponse>(TestJson.Options);
+        Assert.Equal(1, dto!.Enqueued);
+
+        var sent = _factory.Emails.Enqueued.Skip(emailsBefore).Single();
+        Assert.Equal("nora@example.com", sent.ToAddress);
+    }
+
+    [Fact]
+    public async Task SendMessage_EmptyMessage_Returns400()
+    {
+        var ev = await TestHelpers.CreateEventAsync(_client);
+        var req = new SendGuestMessageRequest(GuestMessageAudience.All, "Info", " ");
+
+        var resp = await _client.PostAsJsonAsync(
+            $"/api/manage/{ev.AdminToken}/invitees/message", req, TestJson.Options);
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        var problem = await TestHelpers.ReadProblemAsync(resp);
+        var errors = TestHelpers.GetErrors(problem, "message");
+        Assert.Contains(errors, e => e.Contains("påkrævet"));
+    }
+
+    [Fact]
+    public async Task SendMessage_UnknownAdminToken_Returns404()
+    {
+        var req = new SendGuestMessageRequest(GuestMessageAudience.All, "Info", "Hej");
+        var resp = await _client.PostAsJsonAsync(
+            "/api/manage/wrong-token/invitees/message", req, TestJson.Options);
+        Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+    }
+
     // ---------- Inline image in invitation email ----------
 
     private async Task UploadImageAsync(string adminToken)

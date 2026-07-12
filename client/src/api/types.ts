@@ -130,6 +130,18 @@ export interface SendInvitationsResponse {
   enqueued: number;
 }
 
+export type GuestMessageAudience = 'All' | 'Yes' | 'No';
+
+export interface SendGuestMessageInput {
+  audience: GuestMessageAudience;
+  subject: string;
+  message: string;
+}
+
+export interface SendGuestMessageResponse {
+  enqueued: number;
+}
+
 export interface UpdateInviteeInput {
   email: string | null;
   name: string | null;

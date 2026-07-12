@@ -24,6 +24,7 @@ import type {
   AddInviteeEntry,
   ContactRequirement,
   EventAdmin,
+  GuestMessageAudience,
   Invitee,
   Rsvp,
   RsvpStatus,
@@ -950,6 +951,12 @@ function InviteeSection({
   const [addError, setAddError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sending, setSending] = useState(false);
+  const [messageOpen, setMessageOpen] = useState(false);
+  const [messageAudience, setMessageAudience] = useState<GuestMessageAudience>('All');
+  const [messageSubject, setMessageSubject] = useState('');
+  const [messageText, setMessageText] = useState('');
+  const [messageSending, setMessageSending] = useState(false);
+  const [messageError, setMessageError] = useState<string | null>(null);
   const [pendingRemoval, setPendingRemoval] = useState<{ id: string; label: string } | null>(null);
   const [editingInvitee, setEditingInvitee] = useState<{
     id: string;
@@ -1162,16 +1169,72 @@ function InviteeSection({
     }
   }
 
+  async function onSendMessage(e: FormEvent) {
+    e.preventDefault();
+    if (messageSending) return;
+
+    const subject = messageSubject.trim();
+    const message = messageText.trim();
+    if (!subject || !message) {
+      setMessageError('Udfyld både emne og besked.');
+      return;
+    }
+
+    setMessageSending(true);
+    setMessageError(null);
+    try {
+      const res = await api.sendGuestMessage(adminToken, {
+        audience: messageAudience,
+        subject,
+        message,
+      });
+
+      if (res.enqueued === 0) {
+        toast.message('Ingen at sende til', {
+          description: 'Der blev ikke fundet gæster med email i den valgte målgruppe.',
+        });
+      } else {
+        toast.success(
+          res.enqueued === 1
+            ? '1 besked sendt'
+            : `${res.enqueued} beskeder sendt`,
+        );
+        setMessageOpen(false);
+        setMessageSubject('');
+        setMessageText('');
+        setMessageAudience('All');
+      }
+    } catch (err) {
+      setMessageError(err instanceof ApiError ? err.message : 'Kunne ikke sende beskeden.');
+    } finally {
+      setMessageSending(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <UserPlus className="text-muted-foreground size-4" />
-        <h2 className="font-serif text-xl tracking-tight">
-          Invitationer{' '}
-          <span className="text-muted-foreground text-sm font-normal">
-            ({invitees?.length ?? 0})
-          </span>
-        </h2>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <UserPlus className="text-muted-foreground size-4" />
+          <h2 className="font-serif text-xl tracking-tight">
+            Invitationer{' '}
+            <span className="text-muted-foreground text-sm font-normal">
+              ({invitees?.length ?? 0})
+            </span>
+          </h2>
+        </div>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={() => {
+            setMessageError(null);
+            setMessageOpen(true);
+          }}
+        >
+          <Mail className="size-4" />
+          Send besked
+        </Button>
       </div>
 
       <Card>
@@ -1430,6 +1493,93 @@ function InviteeSection({
           )}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={messageOpen}
+        onOpenChange={(open) => {
+          setMessageOpen(open);
+          if (!open) setMessageError(null);
+        }}
+      >
+        <DialogContent>
+          <form onSubmit={onSendMessage} className="space-y-4">
+            <DialogHeader>
+              <DialogTitle>Send besked til gæster</DialogTitle>
+              <DialogDescription>
+                Beskeden sendes kun til gæster, hvor der findes en email-adresse.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Modtagere</Label>
+              <RadioGroup
+                value={messageAudience}
+                onValueChange={(value) => setMessageAudience(value as GuestMessageAudience)}
+                className="grid gap-2 sm:grid-cols-3"
+              >
+                {(
+                  [
+                    { value: 'All', label: 'Alle' },
+                    { value: 'Yes', label: 'RSVP ja' },
+                    { value: 'No', label: 'RSVP nej' },
+                  ] as const
+                ).map((option) => (
+                  <div key={option.value} className="relative">
+                    <RadioGroupItem
+                      id={`message-audience-${option.value}`}
+                      value={option.value}
+                      className="peer sr-only"
+                    />
+                    <Label
+                      htmlFor={`message-audience-${option.value}`}
+                      className="border-border bg-background hover:bg-accent/50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary peer-data-[state=checked]:text-primary-foreground flex cursor-pointer items-center justify-center rounded-md border px-3 py-2.5 text-sm font-medium transition-colors"
+                    >
+                      {option.label}
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            </div>
+
+            <Field label="Emne" htmlFor="guest-message-subject">
+              <Input
+                id="guest-message-subject"
+                value={messageSubject}
+                onChange={(e) => setMessageSubject(e.target.value)}
+                placeholder={`Besked om ${eventTitle}`}
+                maxLength={200}
+              />
+            </Field>
+
+            <Field label="Besked" htmlFor="guest-message-body">
+              <Textarea
+                id="guest-message-body"
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                rows={6}
+                maxLength={4000}
+              />
+            </Field>
+
+            {messageError && <p className="text-destructive text-sm">{messageError}</p>}
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setMessageOpen(false)}
+                disabled={messageSending}
+              >
+                Annullér
+              </Button>
+              <Button type="submit" disabled={messageSending}>
+                <Send className="size-4" />
+                {messageSending ? 'Sender...' : 'Send besked'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog
         open={!!pendingRemoval}
